@@ -424,7 +424,7 @@ function ArchiveGate() {
         <p className="kicker">Institutional archive</p>
         <h3>Rolls before January 1, 2025</h3>
         <p>
-          Universities, newsrooms, libraries, and legislatures license the other rolls. President, vice president, and governors stay visible. Congress, high courts, secretaries of state, lieutenant governors, and everyone else before January 1, 2025 stay closed.
+          Universities, newsrooms, libraries, and legislatures license this pack. It runs from January 1, 2000: president, vice president, governors, Congress, and the U.S. Supreme Court. State high courts, secretaries of state, lieutenant governors, legislators, old measures, and canvasses are not a complete roll from that date. President, vice president, and governors stay on this screen.
         </p>
       </article>
       <ul className="holdings">

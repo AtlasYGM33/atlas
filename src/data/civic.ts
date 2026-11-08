@@ -160,14 +160,16 @@ export function observedNotes(asOf: string): LiveNote[] {
     .map((e) => ({ id: e.id, date: e.date, title: e.title, body: e.body }));
 }
 
+export const ARCHIVE_FLOOR = "2000-01-01";
 export const ARCHIVE_HOLDINGS: { k: string; v: string }[] = [
-  { k: "President and vice president", v: "On the public map from January 1, 2000" },
-  { k: "Governors", v: "On the public map from January 1, 2000" },
-  { k: "Congress", v: "House and Senate rolls before 2025" },
-  { k: "Other offices", v: "Secretaries of state, lieutenant governors, and legislators before 2025" },
-  { k: "Courts", v: "Justices who left the bench before 2025" },
-  { k: "Measures", v: "Certified statewide ballots from prior cycles" },
-  { k: "Returns", v: "Official canvasses, not election-night snapshots" },
+  { k: "Floor", v: "January 1, 2000" },
+  { k: "President and vice president", v: "In the archive from January 1, 2000" },
+  { k: "Governors", v: "In the archive from January 1, 2000" },
+  { k: "Congress", v: "House and Senate in the archive from January 1, 2000" },
+  { k: "U.S. Supreme Court", v: "In the archive from January 1, 2000" },
+  { k: "State high courts", v: "Not a 2000 roll. Current bench only." },
+  { k: "Other offices", v: "Secretaries of state, lieutenant governors, and state legislators are not a complete roll from 2000." },
+  { k: "Measures and returns", v: "Prior-cycle ballots and official canvasses are not in this pack." },
 ];
 
 /** Sitting 119th Congress, from the published Atlas snapshot. Not a 2026 result. */

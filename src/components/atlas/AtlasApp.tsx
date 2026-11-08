@@ -635,7 +635,7 @@ export function AtlasApp() {
           </div>
           <p className="fine">
             {archive
-              ? "President, vice president, and governors stay visible back to 01/01/2000. Every other office before that date is licensed."
+              ? "President, vice president, and governors stay visible back to 01/01/2000. Congress and the U.S. Supreme Court from that date are in the licensed archive."
               : headline}
           </p>
         </section>
