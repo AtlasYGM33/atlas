@@ -32,6 +32,7 @@ import { resultsOn } from "@/data/results";
 import { NO_SECRETARY, secretaryOn } from "@/data/secretaries";
 import { justiceRole, nationalCourt, stateCourts, type Bench } from "@/data/courts";
 import { VACANCY_DETAIL, calendarEvents, placeById, type Follow } from "@/data/government";
+import { gazetteerLine, ohioByPlaceId, ohioTitle, placeStateName } from "@/data/ohio";
 import { FollowAlerts, GovernmentPanel } from "@/components/atlas/GovernmentPanel";
 
 export type TabId = "overview" | "offices" | "courts" | "candidates" | "calendar" | "vacancies" | "sources";
@@ -61,6 +62,7 @@ type Props = {
   focus: { q?: string; lat?: number; lng?: number; placeId?: string } | null;
   follows: Follow[];
   onToggleFollow: (follow: Follow) => void;
+  onOpenOhio?: (id: string) => void;
 };
 
 const TABS: { id: TabId; label: string }[] = [
@@ -101,11 +103,14 @@ function blurb(selection: Selection): string {
   if (selection.abbr === "DC") {
     return "The District elects a non-voting delegate. Zoom in — the footprint is small on the national map.";
   }
+  if (selection.abbr === "OH" || selection.abbr === "IN" || selection.abbr === "KY") {
+    return `${gazetteerLine(selection.abbr)} A holder is named only when a source is on the row.`;
+  }
   return `${seats} U.S. House seat${seats === 1 ? "" : "s"}. Capital ${capital}.${senate} Zoom in for counties.`;
 }
 
 export function Inspector(props: Props) {
-  const { selection, asOf, archive, headline, checkedLabel, filter, tab, extra, activeId, onTab, onOpen, onActive, saved, onTogglePin, focus, follows, onToggleFollow } = props;
+  const { selection, asOf, archive, headline, checkedLabel, filter, tab, extra, activeId, onTab, onOpen, onActive, saved, onTogglePin, focus, follows, onToggleFollow, onOpenOhio } = props;
   const abbr = selection.level === "nation" ? null : selection.abbr;
   const seats = activeSeats(asOf).filter((s) => !abbr || s.abbr === abbr);
   const measures = measuresFor(abbr, asOf);
@@ -127,8 +132,15 @@ export function Inspector(props: Props) {
   const conf = confidence(asOf);
   const pinKey = selection.level === "county" ? `county:${selection.fips}` : `place:${abbr ?? "US"}`;
   const city = focus?.placeId ? placeById(focus.placeId) : undefined;
+  const ohioHere = focus?.placeId ? ohioByPlaceId(focus.placeId) : undefined;
+  const heading = city ? city.city : ohioHere && ohioHere.kind !== "county" ? ohioTitle(ohioHere) : titleOf(selection);
+  const lede = city
+    ? `${city.county} County, ${selection.level === "nation" ? "Ohio" : selection.level === "state" ? selection.name : selection.name}.`
+    : ohioHere && ohioHere.kind !== "county"
+      ? `${ohioHere.county} County, ${placeStateName(ohioHere.abbr)}. The holder is unpublished unless a source is already on the row.`
+      : blurb(selection);
   const followId = city?.id ?? (abbr ? `state:${abbr}` : "nation");
-  const followLabel = city?.city ?? (selection.level === "county" ? `${selection.county} County` : selection.level === "state" ? selection.name : "United States");
+  const followLabel = city?.city ?? (ohioHere ? ohioTitle(ohioHere) : selection.level === "county" ? `${selection.county} County` : selection.level === "state" ? selection.name : "United States");
   const following = follows.some((f) => f.id === followId);
 
   return (
@@ -148,15 +160,15 @@ export function Inspector(props: Props) {
           <button
             type="button"
             className={"pin" + (following ? " is-on" : "")}
-            onClick={() => onToggleFollow({ id: followId, label: followLabel, abbr, placeId: city?.id })}
+            onClick={() => onToggleFollow({ id: followId, label: followLabel, abbr, placeId: city?.id ?? ohioHere?.id })}
             aria-pressed={following}
           >
             {following ? "Following" : "Follow"}
           </button>
           </div>
         </div>
-        <h1>{titleOf(selection)}</h1>
-        <p className="lede">{blurb(selection)}</p>
+        <h1>{heading}</h1>
+        <p className="lede">{lede}</p>
         <p className="verify">
           <Check size={14} strokeWidth={2.4} aria-hidden />
           <span className="conf">{archive ? "ARCHIVE" : conf}</span>
@@ -179,7 +191,7 @@ export function Inspector(props: Props) {
         </div>
       </header>
       <div className="inspector-scroll">
-        {archive ? (
+        {archive && abbr !== "OH" && abbr !== "IN" && abbr !== "KY" ? (
           <>
             <ArchiveExec asOf={asOf} abbr={abbr} names={props.names} onOpen={onOpen} />
             <ArchiveGate />
@@ -202,6 +214,7 @@ export function Inspector(props: Props) {
             checkedLabel={checkedLabel}
             selection={selection}
             focus={focus}
+            onOpenOhio={onOpenOhio}
           />
         ) : tab === "offices" ? (
           <Offices abbr={abbr} asOf={asOf} seats={seats} />
@@ -233,9 +246,11 @@ export function Inspector(props: Props) {
           </>
         )}
         <p className="disclaimer">
-          {archive
+          {archive && abbr !== "OH" && abbr !== "IN" && abbr !== "KY"
             ? "The archive is a licensed corpus. This screen does not include those rolls."
-            : "Live public map since 01/01/2025. Not an official canvass. This feed does not publish unofficial vote totals."}
+            : archive && (abbr === "OH" || abbr === "IN" || abbr === "KY")
+              ? "Ohio, Indiana, and Kentucky stay on this date. Congress and the U.S. Supreme Court before 01/01/2025 stay in the licensed archive. A local holder stays unpublished without a source."
+              : "Live public map since 01/01/2025. Not an official canvass. This feed does not publish unofficial vote totals."}
         </p>
       </div>
     </aside>
@@ -289,7 +304,9 @@ function Courts({ abbr, asOf, level }: { abbr: string | null; asOf: string; leve
             scope={abbr ?? ""}
             asOf={asOf}
             note={
-              abbr === "OK"
+              abbr === "OH" || abbr === "IN" || abbr === "KY"
+                ? "This bench is the current court, with the sworn date of each justice. It is not a reconstruction back to 2000. Year-only lists were not turned into dates."
+                : abbr === "OK"
                 ? "Oklahoma also has a Court of Criminal Appeals. That bench stays off this list until its roster is checked."
                 : abbr === "TX" && bench.court === "Texas Court of Criminal Appeals"
                   ? "Texas has two courts of last resort. This is the criminal court. The civil court is listed above."
@@ -525,6 +542,7 @@ function Overview({
   checkedLabel,
   selection,
   focus,
+  onOpenOhio,
 }: {
   asOf: string;
   seats: number;
@@ -534,6 +552,7 @@ function Overview({
   checkedLabel: string;
   selection: Selection;
   focus: { q?: string; lat?: number; lng?: number; placeId?: string } | null;
+  onOpenOhio?: (id: string) => void;
 }) {
   const abbr = selection.level === "nation" ? null : selection.abbr;
   const next = nextEvent(asOf, abbr);
@@ -553,6 +572,7 @@ function Overview({
         focus={focus}
         abbr={abbr}
         countyFips={selection.level === "county" ? selection.fips : null}
+        onOpenOhio={onOpenOhio}
       />
       <article className="card static">
         <p className="kicker">When</p>

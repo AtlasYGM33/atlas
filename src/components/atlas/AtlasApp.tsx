@@ -45,6 +45,7 @@ import { RESULTS } from "@/data/results";
 import { SECRETARIES } from "@/data/secretaries";
 import { matchJustices } from "@/data/courts";
 import { focusHits, resolve, type Follow } from "@/data/government";
+import { ohioById, verifiedPlaceId } from "@/data/ohio";
 import { MapCanvas } from "@/components/atlas/MapCanvas";
 import { FILTERS, Inspector, type ExtraId, type TabId } from "@/components/atlas/Inspector";
 
@@ -464,7 +465,7 @@ export function AtlasApp() {
                 ref={searchRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Address, city, ZIP, office, or name"
+                placeholder="City, township, county, ZIP"
                 aria-label="Search places, offices, vacancies, or names"
               />
               {query.trim() && hits.length > 0 ? (
@@ -635,7 +636,9 @@ export function AtlasApp() {
           </div>
           <p className="fine">
             {archive
-              ? "President, vice president, and governors stay visible back to 01/01/2000. Congress and the U.S. Supreme Court from that date are in the licensed archive."
+              ? selectedAbbr === "OH" || selectedAbbr === "IN" || selectedAbbr === "KY"
+                ? "Ohio, Indiana, and Kentucky stay open on this date. Dated state officers change with the slider. Local holders stay unpublished. Congress and the U.S. Supreme Court stay licensed."
+                : "President, vice president, and governors stay visible back to 01/01/2000. Congress and the U.S. Supreme Court from that date are in the licensed archive."
               : headline}
           </p>
         </section>
@@ -670,6 +673,13 @@ export function AtlasApp() {
         focus={focus}
         follows={follows}
         onToggleFollow={toggleFollow}
+        onOpenOhio={(id) => {
+          const unit = ohioById(id);
+          if (!unit) return;
+          const placeId = verifiedPlaceId(unit) ?? unit.id;
+          const pt = geo.places.find((p) => p.fips === unit.countyFips);
+          openCity(placeId, unit.abbr, unit.county, unit.countyFips, pt?.x ?? 740, pt?.y ?? 250);
+        }}
       />
 
       {toast ? <p className="toast" role="status">{toast}</p> : null}

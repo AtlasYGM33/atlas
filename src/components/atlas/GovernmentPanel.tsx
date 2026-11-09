@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ELIGIBILITY,
   alertsFor,
@@ -13,12 +13,14 @@ import {
   type Focus,
   type Follow,
 } from "@/data/government";
+import { gazetteerLine, ohioByLetter, ohioByPlaceId, ohioKindLabel, placeStateName, verifiedPlaceId } from "@/data/ohio";
 import { formatSlash } from "@/data/civic";
 
 const LEVEL: Record<string, string> = {
   federal: "Federal",
   state: "State",
   county: "County",
+  township: "Township",
   municipal: "City",
   education: "School",
   special: "Special district",
@@ -29,11 +31,13 @@ export function GovernmentPanel({
   focus,
   abbr,
   countyFips,
+  onOpenOhio,
 }: {
   asOf: string;
   focus: Focus | null;
   abbr: string | null;
   countyFips: string | null;
+  onOpenOhio?: (id: string) => void;
 }) {
   const dossier = useMemo(
     () => resolve({ asOf, abbr, countyFips, q: focus?.q, lat: focus?.lat, lng: focus?.lng, placeId: focus?.placeId }),
@@ -47,7 +51,7 @@ export function GovernmentPanel({
   }, [compare, abbr, countyFips, focus?.q, focus?.lat, focus?.lng, focus?.placeId]);
   const changes = other ? compareDossiers(dossier, other) : [];
   const rule = ELIGIBILITY.find((e) => e.id === elig) ?? ELIGIBILITY[0];
-  const groups = ["federal", "state", "county", "municipal", "education", "special"] as const;
+  const groups = ["federal", "state", "county", "township", "municipal", "education", "special"] as const;
 
   return (
     <div className="stack">
@@ -180,9 +184,57 @@ export function GovernmentPanel({
         </article>
       ) : null}
 
+      {(abbr === "OH" || abbr === "IN" || abbr === "KY") && onOpenOhio ? (
+        <OhioIndex abbr={abbr} placeId={focus?.placeId} onOpen={onOpenOhio} />
+      ) : null}
+
       <MailAndRecall abbr={dossier.abbr} />
       <ApiCard dossier={dossier} asOf={asOf} />
     </div>
+  );
+}
+
+function OhioIndex({ abbr, placeId, onOpen }: { abbr: string; placeId?: string; onOpen: (id: string) => void }) {
+  const [letter, setLetter] = useState(() => ohioByPlaceId(placeId ?? "")?.name[0]?.toUpperCase() ?? "A");
+  useEffect(() => {
+    const next = placeId ? ohioByPlaceId(placeId) : undefined;
+    if (next?.name[0]) setLetter(next.name[0].toUpperCase());
+  }, [placeId]);
+  const rows = ohioByLetter(letter, abbr);
+  const state = placeStateName(abbr);
+  return (
+    <article className="card static">
+      <p className="kicker">{state} · A to Z</p>
+      <h3>{gazetteerLine(abbr)}</h3>
+      <p>
+        Census Bureau 2024 Gazetteer, alphabetical. Move the date and the dated state officers change. A local holder stays unpublished unless a source is already on the row.
+      </p>
+      <div className="az" role="tablist" aria-label={`${state} places by letter`}>
+        {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((item) => (
+          <button key={item} type="button" className={item === letter ? "is-on" : ""} aria-pressed={item === letter} onClick={() => setLetter(item)}>
+            {item}
+          </button>
+        ))}
+      </div>
+      <ul className="directory ohio-places">
+        {rows.map((unit) => {
+          const on = placeId === unit.id || placeId === verifiedPlaceId(unit);
+          const where = unit.kind === "county" ? state : `${unit.county} County`;
+          const quiet = unit.func !== "A" && unit.func !== "B" ? " · no separate government" : "";
+          return (
+            <li key={unit.id}>
+              <button type="button" className={on ? "is-on" : ""} onClick={() => onOpen(unit.id)}>
+                <span>{unit.kind === "county" ? `${unit.name} County` : unit.name}</span>
+                <em>
+                  {ohioKindLabel(unit.kind)} · {where}
+                  {quiet}
+                </em>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </article>
   );
 }
 

@@ -202,6 +202,8 @@ margin:0;
 padding:6px;
 list-style:none;
 position:absolute;
+max-height:320px;
+overflow:auto;
 top:calc(100% + 6px);
 left:0;
 right:0;
@@ -850,6 +852,27 @@ color:var(--color-fg)
 color:var(--color-faint);
 font-size:12px;
 font-style:normal
+}
+.az {
+flex-wrap:wrap;
+gap:4px;
+margin:10px 0 6px;
+display:flex
+}
+.az button {
+width:28px;
+height:28px;
+color:var(--color-muted);
+border-radius:8px;
+font-size:12px
+}
+.az button.is-on {
+background:var(--color-fg);
+color:var(--color-ink)
+}
+.ohio-places {
+max-height:280px;
+overflow:auto
 }
 .textish {
 color:var(--color-faint);
