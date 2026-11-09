@@ -13,7 +13,7 @@ import {
   type Focus,
   type Follow,
 } from "@/data/government";
-import { gazetteerLine, ohioByLetter, ohioByPlaceId, ohioKindLabel, placeStateName, verifiedPlaceId } from "@/data/ohio";
+import { gazetteerLine, isGazetteerState, ohioByLetter, ohioByPlaceId, ohioKindLabel, placeStateName, placeWhere, verifiedPlaceId } from "@/data/ohio";
 import { formatSlash } from "@/data/civic";
 
 const LEVEL: Record<string, string> = {
@@ -184,7 +184,7 @@ export function GovernmentPanel({
         </article>
       ) : null}
 
-      {(abbr === "OH" || abbr === "IN" || abbr === "KY") && onOpenOhio ? (
+      {isGazetteerState(abbr) && onOpenOhio ? (
         <OhioIndex abbr={abbr} placeId={focus?.placeId} onOpen={onOpenOhio} />
       ) : null}
 
@@ -219,14 +219,22 @@ function OhioIndex({ abbr, placeId, onOpen }: { abbr: string; placeId?: string; 
       <ul className="directory ohio-places">
         {rows.map((unit) => {
           const on = placeId === unit.id || placeId === verifiedPlaceId(unit);
-          const where = unit.kind === "county" ? state : `${unit.county} County`;
+          const where = placeWhere(unit);
+          const kindLabel =
+            unit.kind === "borough"
+              ? unit.name.includes("Municipality")
+                ? "Municipality"
+                : unit.name.includes("City and Borough")
+                  ? "City and borough"
+                  : "Borough"
+              : ohioKindLabel(unit.kind);
           const quiet = unit.func !== "A" && unit.func !== "B" ? " · no separate government" : "";
           return (
             <li key={unit.id}>
               <button type="button" className={on ? "is-on" : ""} onClick={() => onOpen(unit.id)}>
                 <span>{unit.kind === "county" ? `${unit.name} County` : unit.name}</span>
                 <em>
-                  {ohioKindLabel(unit.kind)} · {where}
+                  {kindLabel} · {where}
                   {quiet}
                 </em>
               </button>

@@ -1,5 +1,6 @@
 import geo from "@/data/geo-states.json";
 import roster from "@/data/congress-current.json";
+import archive from "@/data/congress-archive.json";
 
 export type Member = {
   id: string;
@@ -14,11 +15,12 @@ export type Member = {
   note?: string;
 };
 
-const MEMBERS = roster as Member[];
+/** Hand-checked current roster wins wherever a term overlaps the archive. */
+const MEMBERS = [...(archive as Member[]), ...(roster as Member[])];
 
 const STATE_NAME = Object.fromEntries(geo.states.map((s) => [s.abbr, s.name]));
 
-/** Ohio first, then the other states A–Z. Current terms only. */
+/** Ohio first, then the other states A–Z. Whoever held the seat on that date, back to 2000-01-01. */
 export function membersOn(asOf: string, abbr: string | null): { abbr: string; name: string; members: Member[] }[] {
   const live = MEMBERS.filter((m) => {
     if (m.start > asOf) return false;
@@ -53,8 +55,12 @@ export function matchMembers(query: string, limit = 6): Member[] {
   const q = query.trim().toLowerCase();
   if (q.length < 3) return [];
   const out: Member[] = [];
+  const seen = new Set<string>();
   for (const m of MEMBERS) {
     if (!m.name.toLowerCase().includes(q)) continue;
+    const key = `${m.id}:${m.chamber}:${m.abbr}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     out.push(m);
     if (out.length >= limit) break;
   }

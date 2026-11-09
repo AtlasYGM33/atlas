@@ -1,17 +1,22 @@
-/** Ohio, Indiana, and Kentucky governments from the Census Bureau 2024 Gazetteer.
+/** Ohio, Indiana, Kentucky, Alabama, Alaska, and Arizona from the Census Bureau 2024 Gazetteer.
  *  A place that sits in more than one county keeps the county of its Census point.
- *  Kentucky has no township governments, so census county divisions are not listed.
+ *  Kentucky, Alabama, Arizona, and Alaska have no township governments.
+ *  Alaska census areas are statistical and are not listed.
  *  No officeholder is stored in this file. */
 
+import alabamaUnits from "@/data/alabama-units.json";
+import alaskaUnits from "@/data/alaska-units.json";
+import arizonaUnits from "@/data/arizona-units.json";
 import indianaUnits from "@/data/indiana-units.json";
 import kentuckyUnits from "@/data/kentucky-units.json";
+import ohioJurisdictions from "@/data/ohio-jurisdictions.json";
 import ohioUnits from "@/data/ohio-units.json";
 
-export type OhioKind = "county" | "city" | "town" | "village" | "township";
+export type OhioKind = "county" | "city" | "town" | "village" | "township" | "borough";
 
 export type OhioUnit = {
   id: string;
-  abbr: "OH" | "IN" | "KY";
+  abbr: "OH" | "IN" | "KY" | "AL" | "AK" | "AZ";
   name: string;
   kind: OhioKind;
   countyFips: string;
@@ -34,6 +39,9 @@ export const GAZETTEER: OhioUnit[] = [
   ...tag("OH", ohioUnits as Row[]),
   ...tag("IN", indianaUnits as Row[]),
   ...tag("KY", kentuckyUnits as Row[]),
+  ...tag("AL", alabamaUnits as Row[]),
+  ...tag("AK", alaskaUnits as Row[]),
+  ...tag("AZ", arizonaUnits as Row[]),
 ];
 
 export const OHIO_UNITS = GAZETTEER.filter((unit) => unit.abbr === "OH");
@@ -64,16 +72,26 @@ export function gazetteerCounts(abbr: string) {
     towns: rows.filter((unit) => unit.kind === "town").length,
     villages: rows.filter((unit) => unit.kind === "village").length,
     townships: rows.filter((unit) => unit.kind === "township").length,
+    boroughs: rows.filter((unit) => unit.kind === "borough").length,
   };
 }
 
 export const OHIO_COUNTS = gazetteerCounts("OH");
 
 export function placeStateName(abbr: string): string {
+  if (abbr === "AL") return "Alabama";
+  if (abbr === "AK") return "Alaska";
+  if (abbr === "AZ") return "Arizona";
   if (abbr === "IN") return "Indiana";
   if (abbr === "KY") return "Kentucky";
   if (abbr === "OH") return "Ohio";
   return abbr;
+}
+
+const GAZETTEER_ABBRS = new Set(["OH", "IN", "KY", "AL", "AK", "AZ"]);
+
+export function isGazetteerState(abbr: string | null | undefined): abbr is OhioUnit["abbr"] {
+  return !!abbr && GAZETTEER_ABBRS.has(abbr);
 }
 
 export function gazetteerLine(abbr: string): string {
@@ -84,7 +102,22 @@ export function gazetteerLine(abbr: string): string {
   if (abbr === "IN") {
     return `${counts.counties} counties, ${counts.cities} cities, ${counts.towns} towns, and ${counts.townships} townships, A to Z.`;
   }
+  if (abbr === "AL") {
+    return `${counts.counties} counties, ${counts.cities} cities, and ${counts.towns} towns, A to Z. Alabama has no township governments.`;
+  }
+  if (abbr === "AK") {
+    return `${counts.boroughs} boroughs and unified municipalities, and ${counts.cities} cities, A to Z. Census areas are not governments.`;
+  }
+  if (abbr === "AZ") {
+    return `${counts.counties} counties, ${counts.cities} cities, and ${counts.towns} towns, A to Z. Arizona has no township governments.`;
+  }
   return `${counts.counties} counties, ${counts.cities} cities, ${counts.villages} villages, and ${counts.townships} townships, A to Z.`;
+}
+
+export function placeWhere(unit: OhioUnit): string {
+  if (unit.abbr === "AK") return unit.kind === "borough" ? "Alaska" : unit.county;
+  if (unit.kind === "county" || unit.kind === "borough") return placeStateName(unit.abbr);
+  return `${unit.county} County`;
 }
 
 export function ohioById(id: string): OhioUnit | undefined {
@@ -106,10 +139,12 @@ export function ohioKindLabel(kind: OhioKind): string {
   if (kind === "city") return "City";
   if (kind === "town") return "Town";
   if (kind === "village") return "Village";
+  if (kind === "borough") return "Borough";
   return "Township";
 }
 
 export function ohioTitle(unit: OhioUnit): string {
+  if (unit.kind === "borough") return unit.name;
   if (unit.kind === "county") return `${unit.name} County`;
   return `${unit.name} ${ohioKindLabel(unit.kind)}`;
 }
@@ -117,6 +152,20 @@ export function ohioTitle(unit: OhioUnit): string {
 export function ohioByLetter(letter: string, abbr = "OH"): OhioUnit[] {
   const initial = letter.toUpperCase();
   return GAZETTEER.filter((unit) => unit.abbr === abbr && unit.name[0]?.toUpperCase() === initial);
+}
+
+export type OhioJurisdiction = {
+  cd?: number[];
+  senate?: number[];
+  house?: number[];
+  school?: string;
+};
+
+const JURIS = ohioJurisdictions as Record<string, OhioJurisdiction>;
+
+/** Census district overlap for an Ohio government. School is the district at the Census point. */
+export function ohioJurisdiction(id: string): OhioJurisdiction | undefined {
+  return JURIS[id];
 }
 
 function km(aLat: number, aLng: number, bLat: number, bLng: number): number {
@@ -147,27 +196,34 @@ function wantedKind(text: string): OhioKind | null {
   if (/\btowns?\b/.test(text)) return "town";
   if (/\bvillages?\b/.test(text)) return "village";
   if (/\bcity\b|\bcities\b/.test(text)) return "city";
+  if (/\bboroughs?\b/.test(text)) return "borough";
   if (/\bcounty\b|\bcounties\b/.test(text)) return "county";
   return null;
 }
 
 function namedState(text: string): OhioUnit["abbr"] | null {
+  if (/\balaska\b/.test(text)) return "AK";
+  if (/\barizona\b/.test(text)) return "AZ";
+  if (/\balabama\b/.test(text)) return "AL";
   if (/\bkentucky\b|\bky\b/.test(text)) return "KY";
   if (/\bindiana\b/.test(text)) return "IN";
   if (/\bohio\b|\boh\b/.test(text)) return "OH";
+  if (/\bak\b/.test(text)) return "AK";
+  if (/\baz\b/.test(text)) return "AZ";
+  if (/\bal\b/.test(text)) return "AL";
   return null;
 }
 
-/** Alphabetical hits across Ohio, Indiana, and Kentucky. */
+/** Alphabetical hits across the loaded gazetteer states. */
 export function ohioHits(query: string, limit = 8): OhioUnit[] {
   const raw = query.trim().toLowerCase().replace(/\./g, "").replace(/,/g, " ");
   if (raw.length < 2) return [];
   const kind = wantedKind(raw);
   const state = namedState(raw);
   const q = raw
-    .replace(/\bohio\b|\bindiana\b|\bkentucky\b/g, " ")
-    .replace(/\boh\b|\bky\b/g, " ")
-    .replace(/\b(township|townships|town|towns|village|villages|city|cities|county|counties)\b/g, " ")
+    .replace(/\bohio\b|\bindiana\b|\bkentucky\b|\balabama\b|\balaska\b|\barizona\b/g, " ")
+    .replace(/\boh\b|\bky\b|\bal\b|\bak\b|\baz\b/g, " ")
+    .replace(/\b(township|townships|town|towns|village|villages|city|cities|county|counties|borough|boroughs)\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   if (q.length < 2) return [];
@@ -203,24 +259,33 @@ export function ohioHits(query: string, limit = 8): OhioUnit[] {
 export function matchOhio(query: string, prefer?: string | null): OhioUnit | null {
   const hits = ohioHits(query, 40);
   const raw = query.trim().toLowerCase().replace(/\./g, "").replace(/,/g, " ");
-  const state = namedState(raw) ?? (prefer === "OH" || prefer === "IN" || prefer === "KY" ? prefer : null);
+  const state = namedState(raw) ?? (isGazetteerState(prefer) ? prefer : null);
   const pool = state ? hits.filter((unit) => unit.abbr === state) : hits;
   const rows = pool.length ? pool : hits;
   if (rows.length === 0) return null;
   if (rows.length === 1) return rows[0] ?? null;
   const kind = wantedKind(raw);
   const q = raw
-    .replace(/\bohio\b|\bindiana\b|\bkentucky\b/g, " ")
-    .replace(/\boh\b|\bky\b/g, " ")
-    .replace(/\b(township|townships|town|towns|village|villages|city|cities|county|counties)\b/g, " ")
+    .replace(/\bohio\b|\bindiana\b|\bkentucky\b|\balabama\b|\balaska\b|\barizona\b/g, " ")
+    .replace(/\boh\b|\bky\b|\bal\b|\bak\b|\baz\b/g, " ")
+    .replace(/\b(township|townships|town|towns|village|villages|city|cities|county|counties|borough|boroughs)\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  const exact = rows.filter((unit) => unit.name.toLowerCase() === q && (!kind || unit.kind === kind));
+  const stem = rows.filter((unit) => {
+    if (kind && unit.kind !== kind) return false;
+    const name = unit.name.toLowerCase();
+    return name === q || name.startsWith(`${q} `);
+  });
+  const local = stem.filter((unit) => unit.kind === "city" || unit.kind === "town" || unit.kind === "village" || unit.kind === "borough");
+  // Anchorage is a Kentucky city and the start of Anchorage Municipality. A township in another state does not count.
+  if (!state && new Set(local.map((unit) => unit.abbr)).size > 1) return null;
+  const exact = local.filter((unit) => unit.name.toLowerCase() === q);
   if (exact.length === 1) return exact[0] ?? null;
-  if (!kind) {
-    const municipalities = exact.filter((unit) => unit.kind === "city" || unit.kind === "town" || unit.kind === "village");
-    const states = new Set(municipalities.map((unit) => unit.abbr));
-    if (municipalities.length === 1 && states.size === 1) return municipalities[0] ?? null;
+  if (exact.length === 0 && local.length === 1) return local[0] ?? null;
+  if (kind) {
+    const typed = stem.filter((unit) => unit.kind === kind);
+    if (!state && new Set(typed.map((unit) => unit.abbr)).size > 1) return null;
+    if (typed.length === 1) return typed[0] ?? null;
   }
   return null;
 }

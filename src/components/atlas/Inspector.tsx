@@ -32,7 +32,7 @@ import { resultsOn } from "@/data/results";
 import { NO_SECRETARY, secretaryOn } from "@/data/secretaries";
 import { justiceRole, nationalCourt, stateCourts, type Bench } from "@/data/courts";
 import { VACANCY_DETAIL, calendarEvents, placeById, type Follow } from "@/data/government";
-import { gazetteerLine, ohioByPlaceId, ohioTitle, placeStateName } from "@/data/ohio";
+import { gazetteerLine, isGazetteerState, ohioByPlaceId, ohioTitle, placeStateName } from "@/data/ohio";
 import { FollowAlerts, GovernmentPanel } from "@/components/atlas/GovernmentPanel";
 
 export type TabId = "overview" | "offices" | "courts" | "candidates" | "calendar" | "vacancies" | "sources";
@@ -103,7 +103,7 @@ function blurb(selection: Selection): string {
   if (selection.abbr === "DC") {
     return "The District elects a non-voting delegate. Zoom in — the footprint is small on the national map.";
   }
-  if (selection.abbr === "OH" || selection.abbr === "IN" || selection.abbr === "KY") {
+  if (isGazetteerState(selection.abbr)) {
     return `${gazetteerLine(selection.abbr)} A holder is named only when a source is on the row.`;
   }
   return `${seats} U.S. House seat${seats === 1 ? "" : "s"}. Capital ${capital}.${senate} Zoom in for counties.`;
@@ -191,7 +191,7 @@ export function Inspector(props: Props) {
         </div>
       </header>
       <div className="inspector-scroll">
-        {archive && abbr !== "OH" && abbr !== "IN" && abbr !== "KY" ? (
+        {archive && !isGazetteerState(abbr) ? (
           <>
             <ArchiveExec asOf={asOf} abbr={abbr} names={props.names} onOpen={onOpen} />
             <ArchiveGate />
@@ -246,10 +246,10 @@ export function Inspector(props: Props) {
           </>
         )}
         <p className="disclaimer">
-          {archive && abbr !== "OH" && abbr !== "IN" && abbr !== "KY"
+          {archive && !isGazetteerState(abbr)
             ? "The archive is a licensed corpus. This screen does not include those rolls."
-            : archive && (abbr === "OH" || abbr === "IN" || abbr === "KY")
-              ? "Ohio, Indiana, and Kentucky stay on this date. Congress and the U.S. Supreme Court before 01/01/2025 stay in the licensed archive. A local holder stays unpublished without a source."
+            : archive && isGazetteerState(abbr)
+              ? "Ohio, Indiana, Kentucky, Alabama, Alaska, and Arizona stay on this date. Congress and the U.S. Supreme Court before 01/01/2025 stay in the licensed archive. A local holder stays unpublished without a source."
               : "Live public map since 01/01/2025. Not an official canvass. This feed does not publish unofficial vote totals."}
         </p>
       </div>
@@ -304,7 +304,7 @@ function Courts({ abbr, asOf, level }: { abbr: string | null; asOf: string; leve
             scope={abbr ?? ""}
             asOf={asOf}
             note={
-              abbr === "OH" || abbr === "IN" || abbr === "KY"
+              isGazetteerState(abbr)
                 ? "This bench is the current court, with the sworn date of each justice. It is not a reconstruction back to 2000. Year-only lists were not turned into dates."
                 : abbr === "OK"
                 ? "Oklahoma also has a Court of Criminal Appeals. That bench stays off this list until its roster is checked."

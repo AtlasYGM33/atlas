@@ -45,7 +45,7 @@ import { RESULTS } from "@/data/results";
 import { SECRETARIES } from "@/data/secretaries";
 import { matchJustices } from "@/data/courts";
 import { focusHits, resolve, type Follow } from "@/data/government";
-import { ohioById, verifiedPlaceId } from "@/data/ohio";
+import { isGazetteerState, ohioById, verifiedPlaceId } from "@/data/ohio";
 import { MapCanvas } from "@/components/atlas/MapCanvas";
 import { FILTERS, Inspector, type ExtraId, type TabId } from "@/components/atlas/Inspector";
 
@@ -636,8 +636,8 @@ export function AtlasApp() {
           </div>
           <p className="fine">
             {archive
-              ? selectedAbbr === "OH" || selectedAbbr === "IN" || selectedAbbr === "KY"
-                ? "Ohio, Indiana, and Kentucky stay open on this date. Dated state officers change with the slider. Local holders stay unpublished. Congress and the U.S. Supreme Court stay licensed."
+              ? isGazetteerState(selectedAbbr)
+                ? "Ohio, Indiana, Kentucky, Alabama, Alaska, and Arizona stay open on this date. Dated state officers change with the slider. Local holders stay unpublished. Congress and the U.S. Supreme Court stay licensed."
                 : "President, vice president, and governors stay visible back to 01/01/2000. Congress and the U.S. Supreme Court from that date are in the licensed archive."
               : headline}
           </p>
