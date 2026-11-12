@@ -166,7 +166,26 @@ export type Seat = {
   xKey: "TX-23" | "FL-20";
 };
 
-export const SEATS: Seat[] = [];
+export const SEATS: Seat[] = [
+  {
+    id: "tx-23",
+    abbr: "TX",
+    label: "TX-23",
+    xKey: "TX-23",
+    title: "TX-23 vacant",
+    resigned: "2026-04-14",
+    body: "U.S. House seat vacant after Tony Gonzales resigned on April 14, 2026. Texas did not issue a special-election writ. The seat was on the November 3 ballot and stays empty until a successor is sworn in on January 3, 2027. The district runs from San Antonio to El Paso.",
+  },
+  {
+    id: "fl-20",
+    abbr: "FL",
+    label: "FL-20",
+    xKey: "FL-20",
+    title: "FL-20 vacant",
+    resigned: "2026-04-21",
+    body: "U.S. House seat vacant after Sheila Cherfilus-McCormick resigned on April 21, 2026. Florida did not call a special election. The regular November 3 election fills the next term; the current seat stays empty until the winner is sworn in.",
+  },
+];
 
 export type Person = {
   id: string;
@@ -176,7 +195,13 @@ export type Person = {
   abbr: string;
 };
 
-export const PEOPLE: Person[] = [];
+export const PEOPLE: Person[] = [
+  { id: "stout", name: "Katy Padilla Stout", party: "Democrat", race: "TX-23", abbr: "TX" },
+  { id: "herrera", name: "Brandon Herrera", party: "Republican", race: "TX-23", abbr: "TX" },
+  { id: "dws", name: "Debbie Wasserman Schultz", party: "Democrat", race: "FL-20", abbr: "FL" },
+  { id: "andersen", name: "Brent Andersen", party: "Republican", race: "FL-20", abbr: "FL" },
+  { id: "maxime", name: "Kedner Maxime", party: "Independent", race: "FL-20", abbr: "FL" },
+];
 
 export type CalEvent = {
   id: string;
@@ -190,8 +215,8 @@ export type CalEvent = {
 export const CALENDAR: CalEvent[] = [
   { id: "term-open", date: "2025-01-20", abbr: null, kind: "term", title: "Current term begins", body: "The public atlas has been live since January 1, 2025. This date is the presidential inauguration inside that window." },
   { id: "tx-primary", date: "2026-03-03", abbr: "TX", kind: "primary", title: "Texas primary", body: "Texas held its primary on March 3, 2026, including the nomination for the 23rd district." },
-  { id: "tx-resign", date: "2026-04-14", abbr: "TX", kind: "term", title: "TX-23 becomes vacant", body: "The officeholder's resignation took effect. No special election was called." },
-  { id: "fl-resign", date: "2026-04-21", abbr: "FL", kind: "term", title: "FL-20 becomes vacant", body: "The officeholder resigned. No special election was called." },
+  { id: "tx-resign", date: "2026-04-14", abbr: "TX", kind: "term", title: "TX-23 becomes vacant", body: "Tony Gonzales's resignation took effect. No special election was called." },
+  { id: "fl-resign", date: "2026-04-21", abbr: "FL", kind: "term", title: "FL-20 becomes vacant", body: "Sheila Cherfilus-McCormick resigned. No special election was called." },
   { id: "fl-primary", date: "2026-08-18", abbr: "FL", kind: "primary", title: "Florida closed primary", body: "Florida's primary was August 18, 2026." },
   { id: "verified", date: "2026-09-18", abbr: null, kind: "deadline", title: "Atlas verification pass", body: "Office vacancies and the certified-measure list were checked against public reports." },
   { id: "uocava", date: "2026-09-19", abbr: null, kind: "deadline", title: "Federal overseas/military ballot window (UOCAVA)", body: "Overseas · United States" },
@@ -279,7 +304,26 @@ export const CONGRESS = {
   source: "Clerk of the House official list of members, 2 September 2026",
 };
 
-export const FEDERAL_OFFICES = [] as const;
+export const FEDERAL_OFFICES = [
+  {
+    id: "us-president",
+    title: "President of the United States",
+    party: "R",
+    name: "Donald J. Trump",
+    termStart: "2025-01-20",
+    termEnd: "2029-01-20",
+    note: "Second term. Next presidential election is 2028.",
+  },
+  {
+    id: "us-vice",
+    title: "Vice President of the United States",
+    party: "R",
+    name: "J.D. Vance",
+    termStart: "2025-01-20",
+    termEnd: "2029-01-20",
+    note: "President of the Senate.",
+  },
+] as const;
 
 export function nextEvent(asOf: string, abbr: string | null): CalEvent | null {
   return (
@@ -360,7 +404,16 @@ export type Administration = {
 };
 
 /** Consecutive service, so a date inside the span resolves to that person. */
-export const ADMINISTRATIONS: Administration[] = [];
+export const ADMINISTRATIONS: Administration[] = [
+  { president: "Bill Clinton", vice: "Al Gore", party: "D", partyName: "Democrat", start: "1993-01-20", end: "2001-01-20", note: "Second term. In office on January 1, 2000." },
+  { president: "George W. Bush", vice: "Dick Cheney", party: "R", partyName: "Republican", start: "2001-01-20", end: "2005-01-20", note: "First term." },
+  { president: "George W. Bush", vice: "Dick Cheney", party: "R", partyName: "Republican", start: "2005-01-20", end: "2009-01-20", note: "Second term." },
+  { president: "Barack Obama", vice: "Joe Biden", party: "D", partyName: "Democrat", start: "2009-01-20", end: "2013-01-20", note: "First term." },
+  { president: "Barack Obama", vice: "Joe Biden", party: "D", partyName: "Democrat", start: "2013-01-20", end: "2017-01-20", note: "Second term." },
+  { president: "Donald J. Trump", vice: "Mike Pence", party: "R", partyName: "Republican", start: "2017-01-20", end: "2021-01-20", note: "First term." },
+  { president: "Joe Biden", vice: "Kamala Harris", party: "D", partyName: "Democrat", start: "2021-01-20", end: "2025-01-20", note: "Single term." },
+  { president: "Donald J. Trump", vice: "J.D. Vance", party: "R", partyName: "Republican", start: "2025-01-20", end: "2029-01-20", note: "Second term. Next presidential election is 2028." },
+];
 
 export function administrationOn(asOf: string): Administration | null {
   return ADMINISTRATIONS.find((a) => asOf >= a.start && asOf < a.end) ?? null;
@@ -375,7 +428,15 @@ export type Opening = {
   expires: string;
 };
 
-export const OPENINGS: Opening[] = [];
+export const OPENINGS: Opening[] = [
+  { id: "gov-al", abbr: "AL", office: "Governor", body: "Kay Ivey is term-limited. The seat is on the 2026 ballot.", election: "2026-11-03", expires: "2027-01" },
+  { id: "sen-al", abbr: "AL", office: "U.S. Senate · Class 2", body: "Not seeking re-election; running for governor.", election: "2026-11-03", expires: "2027-01-03" },
+  { id: "gov-ak", abbr: "AK", office: "Governor", body: "Mike Dunleavy is term-limited. The seat is on the 2026 ballot.", election: "2026-11-03", expires: "2027-01" },
+  { id: "gov-ca", abbr: "CA", office: "Governor", body: "Gavin Newsom is term-limited. The seat is on the 2026 ballot.", election: "2026-11-03", expires: "2027-01" },
+  { id: "gov-co", abbr: "CO", office: "Governor", body: "Jared Polis is term-limited. The seat is on the 2026 ballot.", election: "2026-11-03", expires: "2027-01" },
+  { id: "gov-fl", abbr: "FL", office: "Governor", body: "Ron DeSantis is term-limited. The seat is on the 2026 ballot.", election: "2026-11-03", expires: "2027-01" },
+  { id: "gov-ga", abbr: "GA", office: "Governor", body: "Brian Kemp is term-limited. The seat is on the 2026 ballot.", election: "2026-11-03", expires: "2027-01" },
+];
 
 export function openingsOn(asOf: string, abbr: string | null): Opening[] {
   if (asOf < "2026-01-01" || asOf >= "2027-01-20") return [];

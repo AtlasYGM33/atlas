@@ -42,7 +42,17 @@ const OPEN_SEATS: { court: string; from: string; seats: number }[] = [
 const SCOTUS: Bench = {
   court: "Supreme Court of the United States",
   url: "https://www.supremecourt.gov/about/biographies.aspx",
-  justices: [],
+  justices: [
+    { name: "Clarence Thomas", title: "Associate justice", party: null, start: "1991-10-23" },
+    { name: "John G. Roberts, Jr.", title: "Chief justice", party: null, start: "2005-09-29" },
+    { name: "Samuel A. Alito, Jr.", title: "Associate justice", party: null, start: "2006-01-31" },
+    { name: "Sonia Sotomayor", title: "Associate justice", party: null, start: "2009-08-08" },
+    { name: "Elena Kagan", title: "Associate justice", party: null, start: "2010-08-07" },
+    { name: "Neil M. Gorsuch", title: "Associate justice", party: null, start: "2017-04-10" },
+    { name: "Brett M. Kavanaugh", title: "Associate justice", party: null, start: "2018-10-06" },
+    { name: "Amy Coney Barrett", title: "Associate justice", party: null, start: "2020-10-27" },
+    { name: "Ketanji Brown Jackson", title: "Associate justice", party: null, start: "2022-06-30" },
+  ],
 };
 
 export function justiceRole(j: Justice, asOf: string): string {

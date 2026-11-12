@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ArrowUpRight, Check } from "lucide-react";
 import {
   ARCHIVE_HOLDINGS,
+  ARCHIVE_CUTOFF,
   CAPITALS,
   CONGRESS_SWEAR,
   DEADLINE_STATES,
@@ -281,6 +282,15 @@ function LiveStrip({ asOf, headline, checkedLabel }: { asOf: string; headline: s
 }
 
 function Courts({ abbr, asOf, level }: { abbr: string | null; asOf: string; level: Selection["level"] }) {
+  if (asOf < ARCHIVE_CUTOFF) {
+    return (
+      <article className="card static archive-card">
+        <p className="kicker">Paid archive</p>
+        <h3>Courts before January 1, 2025</h3>
+        <p>Justices seated before that date stay in the paid archive. They are not published on this map. The current bench is on the public map from January 1, 2025.</p>
+      </article>
+    );
+  }
   const scotus = nationalCourt(asOf);
   const state = abbr ? stateCourts(asOf, abbr) : [];
   return (
@@ -701,17 +711,20 @@ function Offices({
   asOf: string;
   seats: { id: string; label: string; title: string; body: string }[];
 }) {
-  const groups = membersOn(asOf, abbr);
+  const open = asOf >= "2025-01-03";
+  const groups = open ? membersOn(asOf, abbr) : [];
   const count = groups.reduce((n, g) => n + g.members.length, 0);
   return (
     <div className="stack">
       <article className="card static">
         <p className="kicker">In office on this date</p>
-        <h3>{count} House and Senate members{abbr ? "" : " · 50 governors"}</h3>
+        <h3>{open ? `${count} House and Senate members` : "Paid archive"}{abbr || !open ? "" : " · 50 governors"}</h3>
         <p>
-          These are the people in office, not the Nov 3 results. Governors are the National Governors Association roster. Congress was checked from House.gov and Senate.gov, Ohio first, then the other states A to Z. Two House seats stay vacant: TX-23 and FL-20.
+          {open
+            ? "These are the people in office, not the Nov 3 results. Governors are the National Governors Association roster. Congress was checked from House.gov and Senate.gov, Ohio first, then the other states A to Z. Two House seats stay vacant: TX-23 and FL-20."
+            : "The House and Senate before January 3, 2025 are the paid archive. Those names are kept, and they are not published on this map. President, vice president, and governors stay visible."}
         </p>
-        <p className="meta">{asOf < CONGRESS_SWEAR ? "119TH CONGRESS · NOT A 2026 CALL" : "120TH CONGRESS"}</p>
+        <p className="meta">{!open ? "ARCHIVE · NOT PUBLISHED" : asOf < CONGRESS_SWEAR ? "119TH CONGRESS · NOT A 2026 CALL" : "120TH CONGRESS"}</p>
       </article>
       {groups.map((g) => (
         <article key={g.abbr} className="card static">

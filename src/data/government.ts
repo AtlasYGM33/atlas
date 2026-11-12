@@ -1,9 +1,9 @@
 /** Place + time resolution for Atlas.
- *  A holder is named only when this file has a source. Everyone else stays unpublished.
- *  The date on the record is the date the person held the office, not a guess about tomorrow.
+ *  A holder is named when a sourced roster covers that office on that date.
+ *  A seat with no source stays blank. Nothing here invents a person or a 2026 winner.
  */
 
-import { COUNTY_FORM, NYC_COUNTY, VARYING_COUNTY, lowerChamber, lowerNote, upperChamber } from "@/data/county-forms";
+import { COUNTY_FORM, NYC_COUNTY, NO_ATTORNEY, VARYING_COUNTY, attorneyTitle, lowerChamber, upperChamber } from "@/data/county-forms";
 import geo from "@/data/geo-states.json";
 import {
   CALENDAR,
@@ -17,6 +17,7 @@ import { membersOn, type Member } from "@/data/congress";
 import { governorOn } from "@/data/governors";
 import { NO_LIEUTENANT, lieutenantOn } from "@/data/lieutenants";
 import { NO_SECRETARY, secretaryOn } from "@/data/secretaries";
+import { LEGISLATOR_AS_OF, LEGISLATOR_SOURCE, legislatorsAtLarge, legislatorsOn, type LegChamber } from "@/data/legislators";
 import {
   countyHeading,
   gazetteerJurisdiction,
@@ -25,6 +26,7 @@ import {
   isIndependent,
   matchOhio,
   nearestOhio,
+  nearestGovernment,
   ohioById,
   ohioByPlaceId,
   ohioHits,
@@ -146,7 +148,157 @@ type Place = {
 
 const V = "2026-09-18";
 
-const PLACES: Place[] = [];
+const PLACES: Place[] = [
+  {
+    id: "columbus-oh",
+    city: "Columbus",
+    abbr: "OH",
+    county: "Franklin",
+    countyFips: "39049",
+    lat: 39.9612,
+    lng: -82.9988,
+    zips: ["43215", "43201", "43206", "43210", "43212"],
+    houseDistrict: 3,
+    school: {
+      name: "Columbus City Schools",
+      url: "https://www.ccsoh.us",
+      note: "The board is elected. This publish names the district, not a member roll.",
+    },
+    specials: [
+      {
+        id: "cota",
+        title: "Central Ohio Transit Authority",
+        url: "https://www.cota.com",
+        note: "Transit authority. The board is appointed, not a mayor's office.",
+      },
+      {
+        id: "cml",
+        title: "Columbus Metropolitan Library",
+        url: "https://www.columbuslibrary.org",
+        note: "Library district. Trustees are appointed.",
+      },
+      {
+        id: "metro-parks",
+        title: "Columbus and Franklin County Metro Parks",
+        url: "https://www.metroparks.net",
+        note: "Park district. The board is appointed by the probate court.",
+      },
+    ],
+    offices: [
+      {
+        id: "cmh-mayor",
+        level: "municipal",
+        title: "Mayor",
+        jurisdiction: "Columbus",
+        confidence: "HIGH",
+        source: "City of Columbus, Mayor's office",
+        sourceUrl: "https://www.columbus.gov/Government/Mayors-Office/About-Mayor-Andrew-J.-Ginther",
+        note: "Council is a separate body and is not listed member by member.",
+        holders: [
+          { name: "Michael B. Coleman", party: "D", start: "2000-01-01", end: "2016-01-01" },
+          {
+            name: "Andrew J. Ginther",
+            party: "D",
+            start: "2016-01-01",
+            end: "2028-01-01",
+            url: "https://www.columbus.gov/Government/Mayors-Office/About-Mayor-Andrew-J.-Ginther",
+          },
+        ],
+      },
+      {
+        id: "fr-ogrady",
+        level: "county",
+        title: "County commissioner",
+        jurisdiction: "Franklin County",
+        confidence: "HIGH",
+        source: "Franklin County Emergency Management executive committee, meetings through October 21, 2026",
+        sourceUrl: "https://www.franklincountyohio.gov/Agency-Directory/Emergency-Management-and-Homeland-Security/About-Us/Executive-Committee-Members",
+        holders: [{ name: "John O'Grady", party: "D", start: "2017-01-01", end: "2029-01-01" }],
+      },
+      {
+        id: "fr-boyce",
+        level: "county",
+        title: "County commissioner",
+        jurisdiction: "Franklin County",
+        confidence: "HIGH",
+        source: "Franklin County Emergency Management executive committee, meetings through October 21, 2026",
+        sourceUrl: "https://www.franklincountyohio.gov/Agency-Directory/Emergency-Management-and-Homeland-Security/About-Us/Executive-Committee-Members",
+        holders: [{ name: "Kevin Boyce", party: "D", start: "2017-01-02", end: "2029-01-01" }],
+      },
+      {
+        id: "fr-crawley",
+        level: "county",
+        title: "County commissioner",
+        jurisdiction: "Franklin County",
+        confidence: "HIGH",
+        source: "Franklin County Emergency Management executive committee, meetings through October 21, 2026",
+        sourceUrl: "https://www.franklincountyohio.gov/Agency-Directory/Emergency-Management-and-Homeland-Security/About-Us/Executive-Committee-Members",
+        holders: [{ name: "Erica C. Crawley", party: "D", start: "2021-01-02", end: "2029-01-01" }],
+      },
+      {
+        id: "fr-sheriff",
+        level: "county",
+        title: "Sheriff",
+        jurisdiction: "Franklin County",
+        confidence: "HIGH",
+        source: "Franklin County Emergency Management executive committee, meetings through October 21, 2026",
+        sourceUrl: "https://www.franklincountyohio.gov/Agency-Directory/Emergency-Management-and-Homeland-Security/About-Us/Executive-Committee-Members",
+        holders: [{ name: "Dallas Baldwin", party: "R", start: "2021-01-04", end: "2029-01-04" }],
+      },
+    ],
+  },
+  place("chicago-il", "Chicago", "IL", "Cook", "17031", 41.8781, -87.6298, ["60601", "60602", "60611"], 7, "Brandon Johnson", "D", "2023-05-15", "2027-05-15", "https://www.chicago.gov/city/en/depts/mayor.html", "Chicago Public Schools", "https://www.cps.edu", [
+    { id: "cta", title: "Chicago Transit Authority", note: "Transit authority. The board is appointed.", url: "https://www.transitchicago.com" },
+    { id: "mwrd", title: "Metropolitan Water Reclamation District of Greater Chicago", note: "Nine elected commissioners. This publish does not list the roster seat by seat.", url: "https://mwrd.org" },
+    { id: "cpd", title: "Chicago Park District", note: "Park district. The board is appointed.", url: "https://www.chicagoparkdistrict.com" },
+  ]),
+  place("houston-tx", "Houston", "TX", "Harris", "48201", 29.7604, -95.3698, ["77002", "77004", "77019"], 18, "John Whitmire", "D", "2024-01-01", "2028-01-01", "https://www.houstontx.gov/mayor/", "Houston Independent School District", "https://www.houstonisd.org", [
+    { id: "metro", title: "Metropolitan Transit Authority of Harris County", note: "Transit authority. The board is appointed.", url: "https://www.ridemetro.org" },
+  ]),
+  place("philadelphia-pa", "Philadelphia", "PA", "Philadelphia", "42101", 39.9526, -75.1652, ["19102", "19103", "19107"], 3, "Cherelle L. Parker", "D", "2024-01-02", "2028-01-01", "https://www.phila.gov/departments/mayors-office/", "School District of Philadelphia", "https://www.philasd.org", [
+    { id: "septa", title: "SEPTA", note: "Regional transit. The board is appointed by the city and the counties.", url: "https://www.septa.org" },
+  ]),
+  place("phoenix-az", "Phoenix", "AZ", "Maricopa", "04013", 33.4484, -112.074, ["85003", "85004"], 3, "Kate Gallego", "D", "2019-03-21", "2029-01-01", "https://www.phoenix.gov/mayor", "Phoenix Union High School District", "https://www.pxu.org", [
+    { id: "valley-metro", title: "Valley Metro", note: "Regional transit. The board is appointed.", url: "https://www.valleymetro.org" },
+  ]),
+  place("san-francisco-ca", "San Francisco", "CA", "San Francisco", "06075", 37.7793, -122.4193, ["94102", "94103"], 11, "Daniel Lurie", "D", "2025-01-08", "2029-01-08", "https://sf.gov/departments/mayors-office", "San Francisco Unified School District", "https://www.sfusd.edu", [
+    { id: "sfmta", title: "San Francisco Municipal Transportation Agency", note: "Transit and streets. The board is appointed.", url: "https://www.sfmta.com" },
+  ]),
+  place("denver-co", "Denver", "CO", "Denver", "08031", 39.7392, -104.9903, ["80202", "80203"], 1, "Mike Johnston", "D", "2023-07-17", "2027-07-17", "https://www.denvergov.org/Government/Agencies-Departments-Offices/Agencies-Departments-Offices-Directory/Mayors-Office", "Denver Public Schools", "https://www.dpsk12.org", [
+    { id: "rtd", title: "Regional Transportation District", note: "Elected board. This publish does not list directors seat by seat.", url: "https://www.rtd-denver.com" },
+  ]),
+  place("nashville-tn", "Nashville", "TN", "Davidson", "47037", 36.1627, -86.7816, ["37201", "37203"], undefined, "Freddie O'Connell", "D", "2023-09-25", "2027-09-01", "https://www.nashville.gov/departments/mayor", "Metro Nashville Public Schools", "https://www.mnps.org", [
+    { id: "wego", title: "WeGo Public Transit", note: "Transit. The board is appointed by the mayor.", url: "https://www.wegotransit.com" },
+  ]),
+  place("jacksonville-fl", "Jacksonville", "FL", "Duval", "12031", 30.3322, -81.6557, ["32202", "32204"], undefined, "Donna Deegan", "D", "2023-07-01", "2027-07-01", "https://www.jacksonville.gov/mayor", "Duval County Public Schools", "https://www.duvalschools.org", [
+    { id: "jta", title: "Jacksonville Transportation Authority", note: "Transit authority. The board is appointed.", url: "https://www.jtafla.com" },
+  ]),
+  place("dallas-tx", "Dallas", "TX", "Dallas", "48113", 32.7767, -96.797, ["75201", "75202"], 30, "Eric Johnson", "R", "2019-06-17", "2027-06-01", "https://dallascityhall.com/government/citymayor/Pages/default.aspx", "Dallas Independent School District", "https://www.dallasisd.org", [
+    { id: "dart", title: "Dallas Area Rapid Transit", note: "Transit. The board is appointed by member cities.", url: "https://www.dart.org" },
+  ]),
+  place("san-diego-ca", "San Diego", "CA", "San Diego", "06073", 32.7157, -117.1611, ["92101"], 51, "Todd Gloria", "D", "2020-12-10", "2028-12-10", "https://www.sandiego.gov/mayor", "San Diego Unified School District", "https://www.sandiegounified.org", [
+    { id: "mts", title: "San Diego Metropolitan Transit System", note: "Transit. The board is appointed.", url: "https://www.sdmts.com" },
+  ]),
+  place("los-angeles-ca", "Los Angeles", "CA", "Los Angeles", "06037", 34.0537, -118.2428, ["90012", "90015"], 34, "Karen Bass", "D", "2022-12-12", "2026-12-14", "https://mayor.lacity.gov", "Los Angeles Unified School District", "https://www.lausd.org", [
+    { id: "lametro", title: "Los Angeles County Metropolitan Transportation Authority", note: "Transit. The board is a mix of local officials and appointees.", url: "https://www.metro.net" },
+  ]),
+  place("cleveland-oh", "Cleveland", "OH", "Cuyahoga", "39035", 41.5052, -81.6934, ["44113", "44114", "44115"], undefined, "Justin M. Bibb", "D", "2022-01-03", "2030-01-03", "https://www.clevelandohio.gov/city-hall", "Cleveland Metropolitan School District", "https://www.clevelandmetroschools.org", [
+    { id: "gcrta", title: "Greater Cleveland Regional Transit Authority", note: "Transit authority. The board is appointed.", url: "https://www.riderta.com" },
+  ], "Sworn January 3, 2022. Re-elected November 4, 2025. Council is a separate body and is not listed member by member."),
+  place("cincinnati-oh", "Cincinnati", "OH", "Hamilton", "39061", 39.1031, -84.512, ["45202", "45206", "45219"], undefined, "Aftab Pureval", "D", "2022-01-04", "2030-01-04", "https://www.cincinnati-oh.gov/mayor/", "Cincinnati Public Schools", "https://www.cps-k12.org", [
+    { id: "sorta", title: "Metro / Southwest Ohio Regional Transit Authority", note: "Transit authority. The board is appointed.", url: "https://www.go-metro.com" },
+  ], "Sworn January 4, 2022. Next election is November 6, 2029. Council is a separate body and is not listed member by member."),
+  place("dayton-oh", "Dayton", "OH", "Montgomery", "39113", 39.7589, -84.1916, ["45402", "45405"], undefined, "Shenise Turner-Sloss", "D", "2026-01-05", "2030-01-06", "https://ohiomayorsalliance.org/our-members/", "Dayton Public Schools", "https://www.dps.k12.oh.us", [
+    { id: "gd-rta", title: "Greater Dayton Regional Transit Authority", note: "Transit authority. The board is appointed.", url: "https://www.i-riderta.org" },
+  ], "Elected November 2025 and took office January 5, 2026. Commission members are not listed one by one."),
+  place("toledo-oh", "Toledo", "OH", "Lucas", "39095", 41.6528, -83.5379, ["43604", "43605"], undefined, "Wade Kapszukiewicz", "D", "2018-01-02", "2030-01-02", "https://ohiomayorsalliance.org/our-members/", "Toledo Public Schools", "https://www.tps.org", [
+    { id: "tarta", title: "Toledo Area Regional Transit Authority", note: "Transit authority. The board is appointed.", url: "https://tarta.com" },
+  ], "Sworn January 2, 2018. Next election is November 6, 2029. Council is a separate body and is not listed member by member."),
+  place("akron-oh", "Akron", "OH", "Summit", "39153", 41.0814, -81.519, ["44304", "44308"], undefined, "Shammas Malik", "D", "2024-01-01", "2028-01-01", "https://ohiomayorsalliance.org/our-members/", "Akron Public Schools", "https://www.akronschools.com", [
+    { id: "metro-rta", title: "METRO Regional Transit Authority", note: "Transit authority. The board is appointed.", url: "https://www.akronmetro.org" },
+  ], "Next election is November 2, 2027. Council is a separate body and is not listed member by member."),
+  place("springfield-oh", "Springfield", "OH", "Clark", "39023", 39.9242, -83.8088, ["45502", "45503", "45504", "45505", "45506"], undefined, "Rob Rue", "R", "2023-11-14", "2028-01-01", "https://springfieldohio.gov/city-of-springfield-ohio-commission/", "Springfield City School District", "https://www.scsdoh.org", [], "Commission-manager city. Sworn November 14, 2023. The city site lists his term through December 31, 2027. Other commissioners are not listed."),
+];
 
 function place(
   id: string,
@@ -200,7 +352,16 @@ function place(
   };
 }
 
-const AGS: { abbr: string; name: string; party: string; start: string; url: string; note?: string }[] = [];
+const AGS: { abbr: string; name: string; party: string; start: string; url: string; note?: string }[] = [
+  { abbr: "OH", name: "Dave Yost", party: "R", start: "2019-01-14", url: "https://www.ohioattorneygeneral.gov", note: "Term-limited. He remains attorney general until a successor is sworn. The November 3, 2026 result is not seated here." },
+  { abbr: "IL", name: "Kwame Raoul", party: "D", start: "2019-01-14", url: "https://illinoisattorneygeneral.gov" },
+  { abbr: "CA", name: "Rob Bonta", party: "D", start: "2021-04-23", url: "https://oag.ca.gov" },
+  { abbr: "NY", name: "Letitia James", party: "D", start: "2019-01-01", url: "https://ag.ny.gov" },
+  { abbr: "AZ", name: "Kris Mayes", party: "D", start: "2023-01-02", url: "https://www.azag.gov" },
+  { abbr: "GA", name: "Christopher M. Carr", party: "R", start: "2016-11-01", url: "https://law.georgia.gov" },
+  { abbr: "CO", name: "Philip J. Weiser", party: "D", start: "2019-01-08", url: "https://coag.gov" },
+  { abbr: "PA", name: "Dave Sunday", party: "R", start: "2025-01-21", url: "https://www.attorneygeneral.gov" },
+];
 
 /** Governor limits. Virginia cannot serve a consecutive term. Thirteen states have none. */
 const TERM_LIMIT: Record<string, { rule: string; eligibleAgain: string }> = {};
@@ -227,7 +388,52 @@ for (const abbr of [
 const BLOCKED_2026 = new Set(["AL", "AK", "CA", "CO", "FL", "GA", "OH"]);
 
 /** Ohio row officers and presiding officers. Successors from November 3, 2026 are not seated until sworn. */
-const OH_ROW: { id: string; title: string; name: string; party: string; start: string; end: string; url: string; source: string; note: string }[] = [];
+const OH_ROW: { id: string; title: string; name: string; party: string; start: string; end: string; url: string; source: string; note: string }[] = [
+  {
+    id: "OH-auditor",
+    title: "Auditor of state",
+    name: "Keith Faber",
+    party: "R",
+    start: "2019-01-11",
+    end: "2027-01-11",
+    url: "https://ohioauditor.gov",
+    source: "Ballotpedia, Ohio Auditor of State, current officeholder as of November 7, 2026",
+    note: "Term-limited. He stays auditor until a successor is sworn. Ballotpedia had not called the November 3 race, so no winner is named here.",
+  },
+  {
+    id: "OH-treasurer",
+    title: "Treasurer of state",
+    name: "Robert Sprague",
+    party: "R",
+    start: "2019-01-14",
+    end: "2027-01-14",
+    url: "https://tos.ohio.gov",
+    source: "Ballotpedia, Ohio Treasurer, current officeholder as of November 7, 2026",
+    note: "Term-limited. He stays treasurer until a successor is sworn. The November 3 result is not seated here.",
+  },
+  {
+    id: "OH-senate-president",
+    title: "Senate president",
+    name: "Robert McColley",
+    party: "R",
+    start: "2025-01-06",
+    end: "2027-01-04",
+    url: "https://ballotpedia.org/2026_Ohio_legislative_session",
+    source: "Ballotpedia, 2026 Ohio legislative session",
+    note: "Presides over the Ohio Senate for this General Assembly. This is not the senator for a local district.",
+  },
+  {
+    id: "OH-speaker",
+    title: "Speaker of the House",
+    name: "Matt Huffman",
+    party: "R",
+    start: "2025-01-06",
+    end: "2027-01-04",
+    url: "https://ballotpedia.org/2026_Ohio_legislative_session",
+    source: "Ballotpedia, 2026 Ohio legislative session",
+    note: "Presides over the Ohio House for this General Assembly. A local district is a separate row when the Census file has one.",
+  },
+];
 
 export type EligibilityRule = {
   id: string;
@@ -358,7 +564,7 @@ const EXTRA: CivicEvent[] = [
     abbr: "CA",
     kind: "recall",
     title: "California gubernatorial recall",
-    body: "The officeholder was recalled. The officeholder was elected the same day. No statewide recall is qualified on the 2026 calendar.",
+    body: "Gray Davis was recalled. Arnold Schwarzenegger was elected the same day. No statewide recall is qualified on the 2026 calendar.",
   },
   {
     id: "oh-reg",
@@ -432,7 +638,7 @@ export const VACANCY_DETAIL: Record<string, Omit<VacancyView, "id" | "abbr">> = 
   "tx-23": {
     office: "U.S. House · Texas 23rd",
     status: "vacant",
-    reason: "Resignation of the officeholder.",
+    reason: "Resignation of Tony Gonzales.",
     since: "2026-04-14",
     process: "The governor did not issue a special-election writ.",
     resolution: "The November 3 election fills the next term only. The current seat stays empty until the winner is sworn in.",
@@ -442,7 +648,7 @@ export const VACANCY_DETAIL: Record<string, Omit<VacancyView, "id" | "abbr">> = 
   "fl-20": {
     office: "U.S. House · Florida 20th",
     status: "vacant",
-    reason: "Resignation of the officeholder.",
+    reason: "Resignation of Sheila Cherfilus-McCormick.",
     since: "2026-04-21",
     process: "Florida did not call a special election.",
     resolution: "The regular general fills the next term. The seat stays empty until the January 3, 2027 swearing-in.",
@@ -686,7 +892,9 @@ function stampCensus(row: OfficeView, note: string): OfficeView {
   return row;
 }
 
-function cdTitle(district: number): string {
+function cdTitle(district: number, abbr?: string): string {
+  if (!district && abbr === "PR") return "Resident Commissioner";
+  if (!district && (abbr === "DC" || abbr === "AS" || abbr === "GU" || abbr === "MP" || abbr === "VI")) return "Delegate · At large";
   return district ? `U.S. House · District ${district}` : "U.S. House · At large";
 }
 
@@ -849,6 +1057,24 @@ function stateCountyOffices(county: string, abbr: string, fips: string | null): 
       ["clerk", "Clerk of the superior court"],
     ].map(([id, title]) => row(id, title));
   }
+  if (abbr === "DC") {
+    return [row("none", "No county", "The District is not inside a county. The mayor and the council are the government. No county board is seated.")];
+  }
+  if (abbr === "GU") {
+    return [row("none", "No county", "Guam is not divided into counties. The municipality is the local government. No county board is seated.")];
+  }
+  if (abbr === "PR") {
+    return [
+      row("mayor", "Mayor", "The holder is not in the published roll."),
+      row("legislature", "Municipal legislature", "Members are not listed."),
+    ];
+  }
+  if (abbr === "AS" && unit?.func !== "N") {
+    return [row("county", "County government", "Census lists an active county. The local title is not guessed. No officer is named.")];
+  }
+  if (abbr === "MP") {
+    return [row("municipal", "Municipal government", "Census lists an active municipality. No officer is named.")];
+  }
   const form = COUNTY_FORM[abbr];
   if (form) {
     const caution = VARYING_COUNTY.has(abbr) ? " A charter or home-rule county may use a different body. This list does not guess which." : "";
@@ -918,18 +1144,24 @@ function ohioOffices(unit: OhioUnit): OfficeView[] {
       unit.func === "C"
         ? "Consolidated with another government. No separate board is seated."
         : unit.func === "N"
-          ? "Census does not list a functioning government here. No officers are seated."
+          ? unit.abbr === "GU"
+            ? "Census marks this municipality as nonfunctioning. No mayor is named."
+            : unit.abbr === "VI"
+              ? "Census marks this town as nonfunctioning. No officers are seated."
+              : "Census does not list a functioning government here. No officers are seated."
           : unit.func === "I"
             ? "Inactive government. No officers are seated."
             : "Census lists the name. It is not a separate municipal government.";
     const title =
-      unit.kind === "town"
-        ? "Town government"
-        : unit.kind === "village"
-          ? "Village government"
-          : unit.kind === "borough"
-            ? "Borough government"
-            : "Municipal government";
+      unit.abbr === "GU"
+        ? "Municipality"
+        : unit.kind === "town"
+          ? "Town government"
+          : unit.kind === "village"
+            ? "Village government"
+            : unit.kind === "borough"
+              ? "Borough government"
+              : "Municipal government";
     return [stampCensus(unpublished(`${unit.id}-gov`, "municipal", title, unit.name, ""), why), school()];
   }
   if (unit.abbr === "IN" && unit.kind === "town") {
@@ -1037,6 +1269,15 @@ function ohioOffices(unit: OhioUnit): OfficeView[] {
       school(),
     ];
   }
+  if (unit.abbr === "AS" && unit.kind === "village") {
+    return [
+      stampCensus(
+        unpublished(`${unit.id}-gov`, "municipal", "Village government", unit.name, ""),
+        "Census lists an active village government. The local title is not guessed. No holder is named.",
+      ),
+      school(),
+    ];
+  }
   const council = unit.kind === "village" ? "Village council" : unit.kind === "town" ? "Town council" : "City council";
   const mayorNote =
     unit.abbr === "AZ" && unit.kind === "town"
@@ -1102,7 +1343,7 @@ function vacanciesFor(asOf: string, abbr: string | null): VacancyView[] {
           abbr: "OH",
           office: "Governor",
           status: "upcoming",
-          reason: "The officeholder is in a second consecutive term and cannot run in 2026.",
+          reason: "Mike DeWine is in a second consecutive term and cannot run in 2026.",
           since: "2019-01-14",
           process: "Ohio elects a governor on November 3, 2026.",
           resolution: "The office stays filled until the successor is sworn in January 2027.",
@@ -1113,10 +1354,10 @@ function vacanciesFor(asOf: string, abbr: string | null): VacancyView[] {
     }
     if (abbr === "OH") {
       const rowOffices = [
-        { id: "oh-auditor-2026", office: "Auditor of state", reason: "The officeholder is term-limited. He was not a candidate for auditor." },
-        { id: "oh-treasurer-2026", office: "Treasurer of state", reason: "The officeholder is term-limited. He was not a candidate for treasurer." },
-        { id: "oh-ag-2026", office: "Attorney general", reason: "The officeholder is term-limited for this office." },
-        { id: "oh-sos-2026", office: "Secretary of state", reason: "The officeholder is term-limited. He was a candidate for auditor, not for this office." },
+        { id: "oh-auditor-2026", office: "Auditor of state", reason: "Keith Faber is term-limited. He was not a candidate for auditor." },
+        { id: "oh-treasurer-2026", office: "Treasurer of state", reason: "Robert Sprague is term-limited. He was not a candidate for treasurer." },
+        { id: "oh-ag-2026", office: "Attorney general", reason: "Dave Yost is term-limited for this office." },
+        { id: "oh-sos-2026", office: "Secretary of state", reason: "Frank LaRose is term-limited. He was a candidate for auditor, not for this office." },
       ];
       for (const row of rowOffices) {
         if (rows.some((r) => r.id === row.id)) continue;
@@ -1136,6 +1377,82 @@ function vacanciesFor(asOf: string, abbr: string | null): VacancyView[] {
     }
   }
   return rows;
+}
+
+function legChamber(abbr: string, which: "senate" | "house"): LegChamber | null {
+  if (abbr === "NE" || abbr === "DC") return which === "senate" ? "legislature" : null;
+  return which === "senate" ? "upper" : "lower";
+}
+
+const LEG_NOTE = `Open States current roster, file date ${LEGISLATOR_AS_OF}. That date is the file, not a swearing-in. The November 3, 2026 winner is not added here.`;
+
+function pushDistrictMembers(
+  offices: OfficeView[],
+  abbr: string,
+  stateName: string,
+  which: "senate" | "house",
+  districts: Array<number | string>,
+  asOf: string,
+  titleFor: (district: number | string) => string,
+): boolean {
+  const chamber = legChamber(abbr, which);
+  if (!chamber) return false;
+  if (asOf < "2025-01-01") {
+    offices.push(
+      stampRel(
+        unpublished(`${abbr}-${which}-past`, "state", titleFor(districts[0] ?? ""), stateName, ""),
+        "This is the 2024 district map. Current members are not copied onto an earlier date. A full state-legislative roll from January 1, 2000 is not in this file.",
+      ),
+    );
+    return true;
+  }
+  const seen = new Set<string>();
+  const add = (person: { name: string; party: string; url: string; district: string }, title: string, id: string) => {
+    const key = `${person.name}|${person.district}|${title}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const row = officeFromHolder(
+      id,
+      "state",
+      title,
+      stateName,
+      { name: person.name, party: person.party, start: LEGISLATOR_AS_OF, end: "2099-01-01", url: person.url || LEGISLATOR_SOURCE },
+      "MEDIUM",
+      LEGISLATOR_SOURCE,
+      LEG_NOTE,
+    );
+    row.start = null;
+    offices.push(row);
+  };
+  for (const district of districts) {
+    const people = legislatorsOn(abbr, chamber, district);
+    if (!people.length) {
+      offices.push(
+        stampRel(
+          unpublished(`${abbr}-${which}-${district}`, "state", titleFor(district), stateName, ""),
+          "The district is known. Open States does not list a current member, so the seat stays blank.",
+        ),
+      );
+      continue;
+    }
+    for (const person of people) {
+      add(person, titleFor(district), `${abbr}-${which}-${district}-${person.name}`);
+    }
+  }
+  if (abbr === "DC" || abbr === "PR") {
+    for (const person of legislatorsAtLarge(abbr, chamber)) {
+      const chair = person.district.toLowerCase().includes("chair");
+      const title = chair
+        ? "Council chair"
+        : which === "senate"
+          ? abbr === "DC"
+            ? "Council · At large"
+            : "Senate · At large"
+          : "House · At large";
+      add(person, title, `${abbr}-${which}-al-${person.name}`);
+    }
+  }
+  return true;
 }
 
 function eventsFor(asOf: string, abbr: string | null): CivicEvent[] {
@@ -1204,8 +1521,16 @@ export function resolve(input: {
         place = hit.place;
         how = `This point is ${hit.km.toFixed(1)} km from ${hit.place.city} city hall.`;
       } else {
-        abbr = st;
-        how = `The point is in ${placeStateName(st)}. No city, town, village, or township centroid is close enough to name.`;
+        const territory = st === "DC" || st === "PR" || st === "AS" || st === "GU" || st === "MP" || st === "VI"
+          ? nearestGovernment(input.lat, input.lng, st)
+          : null;
+        if (territory && territory.km <= 100) {
+          ohio = territory.unit;
+          how = `Nearest Census government is ${ohioTitle(ohio)}, ${territory.km.toFixed(1)} km from this point. That is not a boundary.`;
+        } else {
+          abbr = st;
+          how = `The point is in ${placeStateName(st)}. No city, town, village, or township centroid is close enough to name.`;
+        }
       }
     } else if (hit && hit.km <= 35) {
       place = hit.place;
@@ -1271,42 +1596,70 @@ export function resolve(input: {
   if (abbr && state) {
     const members = membersOn(asOf, abbr).flatMap((g) => g.members);
     const senators = members.filter((m) => m.chamber === "senate");
-    for (const m of senators) offices.push(memberOffice(m, asOf));
     const j = ohio ? gazetteerJurisdiction(ohio.id) : undefined;
     const in119 = asOf >= "2025-01-03" && asOf < "2027-01-03";
-    if (j?.cd?.length === 1 && in119) {
+    if (in119) {
+      for (const m of senators) offices.push(memberOffice(m, asOf));
+      if (!senators.length) {
+        offices.push(
+          unpublished(`${abbr}-senate-us`, "federal", "U.S. Senate", state.name, "No senator is seated on this date."),
+        );
+      }
+    } else {
+      offices.push(
+        unpublished(
+          `${abbr}-senate-us`,
+          "federal",
+          "U.S. Senate",
+          state.name,
+          "Senators before January 3, 2025 are in the paid archive. They are not published on this map.",
+        ),
+      );
+    }
+    const houseMembers = members.filter((m) => m.chamber === "house");
+    const houseOf = (district: number) => houseMembers.find((m) => (m.district ?? 0) === district);
+    const pushHouse = (list: Member[], note?: string) => {
+      list.forEach((m, i) => {
+        const row = memberOffice(m, asOf);
+        if (note && i === 0) row.note = row.note ? `${row.note} ${note}` : note;
+        offices.push(row);
+      });
+    };
+    if (in119 && j?.cd?.length === 1) {
       const district = j.cd[0] ?? 0;
-      const house = members.find((m) => m.chamber === "house" && m.district === district);
+      const house = houseOf(district);
       if (house) offices.push(memberOffice(house, asOf));
       else {
         offices.push(
           stampRel(
-            unpublished(`${abbr}-h-${district}`, "federal", cdTitle(district), state.name, ""),
+            unpublished(`${abbr}-h-${district}`, "federal", cdTitle(district, abbr), state.name, ""),
             district
               ? `No member is seated for district ${district} on ${formatSlash(asOf)}.`
-              : `No member is seated for the at-large seat on ${formatSlash(asOf)}.`,
+              : abbr === "PR"
+                ? `No resident commissioner is seated on ${formatSlash(asOf)}.`
+                : abbr === "DC" || abbr === "AS" || abbr === "GU" || abbr === "MP" || abbr === "VI"
+                  ? `No delegate is seated on ${formatSlash(asOf)}.`
+                  : `No member is seated for the at-large seat on ${formatSlash(asOf)}.`,
           ),
         );
       }
-    } else if (j?.cd?.length === 1) {
-      const district = j.cd[0] ?? 0;
-      offices.push(
-        stampRel(
-          unpublished(`${abbr}-h-${district}`, "federal", cdTitle(district), state.name, ""),
-          district
-            ? "This number is the 119th Congress map. A member is named only while that Congress is seated. Older district numbers are not these lines."
-            : "This is the 119th Congress at-large seat. A member is named only while that Congress is seated.",
-        ),
-      );
-    } else if (j?.cd && j.cd.length > 1) {
-      offices.push(
-        stampRel(
-          unpublished(`${abbr}-house`, "federal", "U.S. House", state.name, ""),
-          `This place meets 119th Congress districts ${j.cd.join(", ")}. No single member is assigned.`,
-        ),
-      );
-    } else if (place?.houseDistrict) {
-      const house = members.find((m) => m.chamber === "house" && m.district === place?.houseDistrict);
+    } else if (in119 && j?.cd && j.cd.length > 1) {
+      const named = j.cd.map((d) => houseOf(d ?? 0)).filter((m): m is Member => Boolean(m));
+      if (named.length) {
+        pushHouse(
+          named,
+          `This place meets 119th Congress districts ${j.cd.join(", ")}. Each of those members is named. No one of them covers the whole place.`,
+        );
+      } else {
+        offices.push(
+          stampRel(
+            unpublished(`${abbr}-house`, "federal", "U.S. House", state.name, ""),
+            `This place meets 119th Congress districts ${j.cd.join(", ")}. No member is seated for those districts on ${formatSlash(asOf)}.`,
+          ),
+        );
+      }
+    } else if (in119 && place?.houseDistrict) {
+      const house = houseOf(place.houseDistrict);
       if (house) offices.push(memberOffice(house, asOf));
       else {
         offices.push(
@@ -1319,6 +1672,8 @@ export function resolve(input: {
           ),
         );
       }
+    } else if (in119 && houseMembers.length) {
+      pushHouse(houseMembers);
     } else {
       offices.push(
         unpublished(
@@ -1326,23 +1681,24 @@ export function resolve(input: {
           "federal",
           "U.S. House",
           state.name,
-          place
-            ? "The congressional district for this city is not on the point."
-            : "Search a published city, or drop a point, to resolve a congressional district. The state still has a House delegation.",
+          in119
+            ? "No House member is on the roll for this state on this date."
+            : "House members before January 3, 2025 are in the paid archive. They are not published on this map.",
         ),
       );
     }
+    const executive = abbr === "DC" ? "Mayor" : "Governor";
     const gov = governorOn(asOf, abbr);
     offices.push(
       officeFromHolder(
         `${abbr}-gov`,
         "state",
-        "Governor",
+        executive,
         state.name,
         gov ? { name: gov.name, party: gov.party, start: gov.start, end: gov.end, url: gov.url } : null,
         gov ? "HIGH" : "UNPUBLISHED",
         gov?.url,
-        gov ? undefined : "No governor is on the public roll for this date.",
+        gov ? undefined : abbr === "DC" ? "No mayor is on the public roll for this date." : "No governor is on the public roll for this date.",
       ),
     );
     if (!NO_LIEUTENANT.has(abbr)) {
@@ -1371,52 +1727,42 @@ export function resolve(input: {
           sos ? { name: sos.name, party: sos.party, start: sos.start, end: "2099-01-01", url: sos.url } : null,
           sos ? "HIGH" : "UNPUBLISHED",
           sos?.url,
-          asOf < "2025-01-01" ? "Secretaries of state before 2025 stay off the public map." : sos?.note,
+          sos?.note,
         ),
       );
     }
-    const ag = AGS.find((a) => a.abbr === abbr && a.start <= asOf);
-    if (ag) {
-      offices.push(
-        officeFromHolder(
-          `${abbr}-ag`,
-          "state",
-          "Attorney general",
-          state.name,
-          { name: ag.name, party: ag.party, start: ag.start, end: "2027-01-20", url: ag.url },
-          "HIGH",
-          ag.url,
-          ag.note,
-        ),
-      );
-    } else {
-      offices.push(
-        unpublished(
-          `${abbr}-ag`,
-          "state",
-          "Attorney general",
-          state.name,
-          "The office applies. This state's attorney general is not in the published roll.",
-        ),
-      );
+    if (!NO_ATTORNEY.has(abbr)) {
+      const ag = asOf >= "2025-01-01" ? AGS.find((a) => a.abbr === abbr && a.start <= asOf) : undefined;
+      const title = attorneyTitle(abbr);
+      if (ag) {
+        offices.push(
+          officeFromHolder(
+            `${abbr}-ag`,
+            "state",
+            title,
+            state.name,
+            { name: ag.name, party: ag.party, start: ag.start, end: "2027-01-20", url: ag.url },
+            "HIGH",
+            ag.url,
+            ag.note,
+          ),
+        );
+      } else {
+        offices.push(
+          unpublished(
+            `${abbr}-ag`,
+            "state",
+            title,
+            state.name,
+            abbr === "PR"
+              ? "The office applies. The secretary is not in the published roll."
+              : "The office applies. This attorney general is not in the published roll.",
+          ),
+        );
+      }
     }
-    if (j?.senate?.length === 1) {
-      const district = j.senate[0] ?? 0;
-      offices.push(
-        stampRel(
-          unpublished(`${abbr}-senate-${district}`, "state", upperChamber(abbr, district), state.name, ""),
-          abbr === "NE"
-            ? "District from the Census 2024 state-senate relationship file. Nebraska has one chamber. The member is not in the published roll. The November 3, 2026 winner is not seated."
-            : "District from the Census 2024 state-senate relationship file. The member is not in the published roll. The November 3, 2026 winner is not seated.",
-        ),
-      );
-    } else if (j?.senate && j.senate.length > 1) {
-      offices.push(
-        stampRel(
-          unpublished(`${abbr}-senate`, "state", upperChamber(abbr), state.name, ""),
-          `This place meets 2024 state-senate districts ${j.senate.join(", ")}. No single member is assigned.`,
-        ),
-      );
+    if (j?.senate?.length) {
+      pushDistrictMembers(offices, abbr, state.name, "senate", j.senate, asOf, (district) => upperChamber(abbr, district));
     } else {
       offices.push(
         unpublished(
@@ -1424,17 +1770,23 @@ export function resolve(input: {
           "state",
           upperChamber(abbr),
           state.name,
-          abbr === "NE"
-            ? "Nebraska has one legislative chamber. A district is named only when the place is inside one."
-            : abbr === "OH"
-              ? "The Senate president is listed separately. A local senate district still applies, and this atlas does not invent the district number or the member."
-              : "A state senate district applies once a point is inside it. This atlas does not invent the district number or the member.",
+          abbr === "GU" || abbr === "VI"
+            ? "The legislature is elected territory-wide. Census does not publish a 2024 district. No member is named."
+            : abbr === "AS"
+              ? "The Fono has a senate. Census does not publish a 2024 district. No member is named."
+              : abbr === "MP"
+                ? "The Commonwealth has a senate. Census does not publish a 2024 district. No member is named."
+                : abbr === "NE"
+                  ? "Nebraska has one legislative chamber. A district is named only when the place is inside one."
+                  : abbr === "OH"
+                    ? "The Senate president is listed separately. A local senate district still applies, and this atlas does not invent the district number or the member."
+                    : "A state senate district applies once a point is inside it. This atlas does not invent the district number or the member.",
         ),
       );
     }
     if (abbr === "OH") {
       for (const row of OH_ROW) {
-        const seated = row.start <= asOf && asOf < row.end;
+        const seated = asOf >= "2025-01-01" && row.start <= asOf && asOf < row.end;
         offices.push(
           officeFromHolder(
             row.id,
@@ -1449,31 +1801,22 @@ export function resolve(input: {
         );
       }
     }
-    if (j?.house?.length === 1) {
-      const district = j.house[0] ?? 0;
-      offices.push(
-        stampRel(
-          unpublished(`${abbr}-house-state-${district}`, "state", lowerChamber(abbr, district), state.name, ""),
-          lowerNote(abbr),
-        ),
-      );
-    } else if (j?.house && j.house.length > 1) {
-      offices.push(
-        stampRel(
-          unpublished(`${abbr}-house-state`, "state", lowerChamber(abbr), state.name, ""),
-          `This place meets 2024 state-house districts ${j.house.join(", ")}. No single member is assigned.`,
-        ),
-      );
-    } else if (abbr !== "NE") {
+    if (j?.house?.length) {
+      pushDistrictMembers(offices, abbr, state.name, "house", j.house, asOf, (district) => lowerChamber(abbr, district));
+    } else if (abbr !== "NE" && abbr !== "DC" && abbr !== "GU" && abbr !== "VI") {
       offices.push(
         unpublished(
           `${abbr}-house-state`,
           "state",
           lowerChamber(abbr),
           state.name,
-          abbr === "OH"
-            ? "The Speaker is listed separately. A local house district still applies, and this atlas does not invent the district number or the member."
-            : "A state house district applies once a point is inside it. This atlas does not invent the district number or the member.",
+          abbr === "AS"
+            ? "The Fono has a house. Census does not publish a 2024 district. No member is named."
+            : abbr === "MP"
+              ? "The Commonwealth has a house. Census does not publish a 2024 district. No member is named."
+              : abbr === "OH"
+                ? "The Speaker is listed separately. A local house district still applies, and this atlas does not invent the district number or the member."
+                : "A state house district applies once a point is inside it. This atlas does not invent the district number or the member.",
         ),
       );
     }
@@ -1486,6 +1829,17 @@ export function resolve(input: {
     else offices.push(...stateCountyOffices(countyName, countyPlace.abbr, countyFips));
   } else if (countyName && abbr) {
     offices.push(...stateCountyOffices(countyName, abbr, countyFips));
+  }
+
+  if (ohio?.kind === "county" && !offices.some((o) => o.level === "education")) {
+    const namedSchool = gazetteerJurisdiction(ohio.id)?.school;
+    if (namedSchool) {
+      const row = unpublished(`${ohio.id}-school`, "education", "School district", namedSchool, "");
+      row.note = `${namedSchool} contains the Census point. This is not a boundary. The board is not named.`;
+      row.url = CENSUS_TIGER;
+      row.source = "U.S. Census Bureau, TIGER/Line 2024 unified school districts";
+      offices.push(row);
+    }
   }
 
   if (place) {

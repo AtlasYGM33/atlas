@@ -84,6 +84,12 @@ const SLUG_ABBR: Record<string, string> = {
   "west-virginia": "WV",
   wisconsin: "WI",
   wyoming: "WY",
+  "district-of-columbia": "DC",
+  "puerto-rico": "PR",
+  "american-samoa": "AS",
+  guam: "GU",
+  "northern-mariana-islands": "MP",
+  "virgin-islands": "VI",
 };
 
 const unitModules = import.meta.glob("./*-units.json", { eager: true, import: "default" }) as Record<string, Row[]>;
@@ -192,6 +198,12 @@ const STATE_NAMES: Record<string, string> = {
   WV: "West Virginia",
   WI: "Wisconsin",
   WY: "Wyoming",
+  DC: "District of Columbia",
+  PR: "Puerto Rico",
+  AS: "American Samoa",
+  GU: "Guam",
+  MP: "Northern Mariana Islands",
+  VI: "U.S. Virgin Islands",
 };
 
 export function placeStateName(abbr: string): string {
@@ -233,6 +245,12 @@ export function gazetteerLine(abbr: string): string {
   if (abbr === "CT") return `${line} Connecticut has no county governments.`;
   if (abbr === "RI") return `${line} Rhode Island has no county governments.`;
   if (abbr === "HI") return `${line} Hawaii has no incorporated places.`;
+  if (abbr === "DC") return "The District of Columbia. Washington is not a separate city government.";
+  if (abbr === "PR") return `${counts.counties} municipios, A to Z. Census places and barrios are not separate governments.`;
+  if (abbr === "AS") return `${counts.counties} districts and ${counts.villages} villages, A to Z.`;
+  if (abbr === "GU") return `${counts.towns} municipalities, A to Z. Census marks them nonfunctioning, so no mayor is named.`;
+  if (abbr === "MP") return `${counts.counties} municipalities and ${counts.villages} villages, A to Z.`;
+  if (abbr === "VI") return `${counts.counties} islands and ${counts.towns} towns, A to Z. Census marks them nonfunctioning.`;
   if (counts.townships === 0 && !TOWN_STATES.has(abbr) && abbr !== "HI") {
     line += ` ${placeStateName(abbr)} has no township governments.`;
   }
@@ -241,6 +259,14 @@ export function gazetteerLine(abbr: string): string {
 
 export function countyHeading(name: string, abbr: string): string {
   if (abbr === "LA") return `${name} Parish`;
+  if (abbr === "DC") return "District of Columbia";
+  if (abbr === "PR") return /municipio/i.test(name) ? name : `${name} Municipio`;
+  if (abbr === "MP") return /municipality/i.test(name) ? name : `${name} Municipality`;
+  if (abbr === "VI") return /island/i.test(name) ? name : `${name} Island`;
+  if (abbr === "AS") {
+    if (/island/i.test(name)) return name;
+    return `${name} District`;
+  }
   if (/\b(county|parish|borough|region|municipality)\b/i.test(name)) return name;
   if (abbr === "CT") return `${name} Planning Region`;
   return `${name} County`;
@@ -249,6 +275,11 @@ export function countyHeading(name: string, abbr: string): string {
 export function placeWhere(unit: OhioUnit): string {
   if (unit.abbr === "AK") return unit.kind === "borough" ? "Alaska" : unit.county;
   if (unit.kind === "county" || (unit.kind === "borough" && unit.abbr === "AK")) return placeStateName(unit.abbr);
+  if (unit.abbr === "PR") return `${unit.county} Municipio`;
+  if (unit.abbr === "AS") return /island/i.test(unit.county) ? unit.county : `${unit.county} District`;
+  if (unit.abbr === "MP") return `${unit.county} Municipality`;
+  if (unit.abbr === "VI") return /island/i.test(unit.county) ? unit.county : `${unit.county} Island`;
+  if (unit.abbr === "GU") return "Guam";
   if (PLANNING.has(unit.countyFips)) {
     return unit.county.includes("Planning Region") ? unit.county : `${unit.county} Planning Region`;
   }
@@ -327,6 +358,17 @@ export function nearestOhio(lat: number, lng: number, abbr?: string | null): { u
   return best;
 }
 
+/** Nearest listed government, including a county equivalent. Used where the territory has no separate city. */
+export function nearestGovernment(lat: number, lng: number, abbr: string): { unit: OhioUnit; km: number } | null {
+  let best: { unit: OhioUnit; km: number } | null = null;
+  for (const unit of GAZETTEER) {
+    if (unit.abbr !== abbr) continue;
+    const d = km(lat, lng, unit.lat, unit.lng);
+    if (!best || d < best.km) best = { unit, km: d };
+  }
+  return best;
+}
+
 function fold(value: string): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\./g, "");
 }
@@ -346,7 +388,24 @@ const NAME_TO_ABBR = Object.entries(STATE_NAMES)
   .map(([abbr, name]) => [name.toLowerCase(), abbr] as const)
   .sort((a, b) => b[0].length - a[0].length);
 
+const STATE_ALIASES: [string, string][] = [
+  ["district of columbia", "DC"],
+  ["washington dc", "DC"],
+  ["northern mariana islands", "MP"],
+  ["us virgin islands", "VI"],
+  ["northern marianas", "MP"],
+  ["american samoa", "AS"],
+  ["virgin islands", "VI"],
+  ["puerto rico", "PR"],
+  ["cnmi", "MP"],
+  ["guam", "GU"],
+];
+
 function namedState(text: string): string | null {
+  for (const [name, abbr] of STATE_ALIASES) {
+    if (!GAZETTEER_ABBRS.has(abbr)) continue;
+    if (text === name || text.endsWith(` ${name}`)) return abbr;
+  }
   for (const [name, abbr] of NAME_TO_ABBR) {
     if (!GAZETTEER_ABBRS.has(abbr)) continue;
     if (text === name || text.endsWith(` ${name}`)) return abbr;
@@ -362,12 +421,12 @@ function placeQuery(raw: string): { state: string | null; kind: OhioKind | null;
   const kind = wantedKind(text);
   let q = text;
   if (state) {
-    const name = STATE_NAMES[state]?.toLowerCase();
+    const name = STATE_NAMES[state]?.toLowerCase().replace(/\./g, "");
     if (name) q = q.replace(new RegExp(`\\b${name.replace(/\s+/g, "\\s+")}\\b`), " ");
     q = q.replace(new RegExp(`\\b${state.toLowerCase()}\\b`), " ");
   }
   q = q
-    .replace(/\b(township|townships|town|towns|village|villages|city|cities|county|counties|borough|boroughs|parish|parishes)\b/g, " ")
+    .replace(/\b(township|townships|town|towns|village|villages|city|cities|county|counties|borough|boroughs|parish|parishes|municipio|municipios|municipality|municipalities|island|district)\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   return { state, kind, q };

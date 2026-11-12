@@ -47,9 +47,17 @@ export const COUNTY_FORM: Record<string, [string, string][]> = {
 export const VARYING_COUNTY = new Set(["CA", "DE", "FL", "GA", "IL", "LA", "MD", "MN", "MO", "NE", "NY", "PA", "TX", "UT", "WA"]);
 export const NYC_COUNTY = new Set(["36005", "36047", "36061", "36081", "36085"]);
 export const TWO_MEMBER_HOUSE = new Set(["AZ", "ID", "ND", "NJ", "SD", "WA"]);
+export const NO_ATTORNEY = new Set(["AS", "MP"]);
+
+export function attorneyTitle(abbr: string): string {
+  if (abbr === "PR") return "Secretary of Justice";
+  return "Attorney general";
+}
 
 export function lowerChamber(abbr: string, district?: number | string): string {
   const seat = district == null || district === "" ? "" : ` · District ${district}`;
+  if (abbr === "PR") return district == null || district === "" ? "House of Representatives" : `House${seat}`;
+  if (abbr === "AS" || abbr === "MP") return "House";
   if (abbr === "CA" || abbr === "NV" || abbr === "NJ" || abbr === "NY" || abbr === "WI") return `State assembly${seat}`;
   if (abbr === "MD" || abbr === "VA" || abbr === "WV") return `House of delegates${seat}`;
   return `State house${seat}`;
@@ -57,11 +65,18 @@ export function lowerChamber(abbr: string, district?: number | string): string {
 
 export function upperChamber(abbr: string, district?: number | string): string {
   const seat = district == null || district === "" ? "" : ` · District ${district}`;
+  if (abbr === "DC") return district == null || district === "" ? "Council" : `Council · Ward ${district}`;
   if (abbr === "NE") return `Legislature${seat}`;
+  if (abbr === "GU" || abbr === "VI") return "Legislature";
+  if (abbr === "PR") return district == null || district === "" ? "Senate" : `Senate${seat}`;
+  if (abbr === "AS" || abbr === "MP") return "Senate";
   return `State senate${seat}`;
 }
 
 export function lowerNote(abbr: string): string {
+  if (abbr === "PR") {
+    return "District from the Census 2024 relationship file. The representative is not named. At-large seats are not this district.";
+  }
   if (TWO_MEMBER_HOUSE.has(abbr)) {
     const body = abbr === "NJ" ? "New Jersey elects two members of the General Assembly from this district." : "This district elects two representatives.";
     return `District from the Census 2024 state-house relationship file. ${body} Neither is in the published roll. The November 3, 2026 winner is not seated.`;
