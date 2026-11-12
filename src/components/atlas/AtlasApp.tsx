@@ -38,6 +38,7 @@ import {
   type MapMode,
 } from "@/data/civic";
 import { getLivePulse } from "@/lib/civic-live";
+import { geocodeCensus, type GeocodeHit } from "@/lib/census-geocode";
 import { matchMembers } from "@/data/congress";
 import { GOVERNORS } from "@/data/governors";
 import { LIEUTENANTS } from "@/data/lieutenants";
@@ -108,10 +109,14 @@ export function AtlasApp() {
   const [focus, setFocus] = useState<{ q?: string; lat?: number; lng?: number; placeId?: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [layersOpen, setLayersOpen] = useState(false);
+  const [showFips, setShowFips] = useState(false);
+  const [censusHit, setCensusHit] = useState<GeocodeHit | null>(null);
+  const [censusBusy, setCensusBusy] = useState(false);
   const [intro, setIntro] = useState(true);
   const nonce = useRef(1);
   const searchRef = useRef<HTMLInputElement>(null);
   const followRef = useRef(true);
+  const censusReq = useRef(0);
 
   useEffect(() => {
     setSaved(loadPins());
@@ -124,6 +129,31 @@ export function AtlasApp() {
     }
     if (localStorage.getItem("atlas.intro") === "1") setIntro(false);
   }, []);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!looksLikeAddress(q)) {
+      setCensusHit(null);
+      setCensusBusy(false);
+      return;
+    }
+    const id = ++censusReq.current;
+    setCensusBusy(true);
+    const timer = setTimeout(() => {
+      void geocodeCensus({ data: { address: q } })
+        .then((hit) => {
+          if (censusReq.current !== id) return;
+          setCensusHit(hit);
+          setCensusBusy(false);
+        })
+        .catch(() => {
+          if (censusReq.current !== id) return;
+          setCensusHit(null);
+          setCensusBusy(false);
+        });
+    }, 420);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   useEffect(() => {
     let stop = false;
@@ -315,22 +345,61 @@ export function AtlasApp() {
       (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        const dossier = resolve({ asOf, lat, lng });
-        if (dossier.placeId && dossier.abbr && dossier.county && dossier.countyFips) {
-          const pt = geo.places.find((p) => p.fips === dossier.countyFips);
-          openCity(dossier.placeId, dossier.abbr, dossier.county, dossier.countyFips, pt?.x ?? 400, pt?.y ?? 300);
-          note(dossier.how);
-          return;
-        }
-        if (dossier.abbr) openAbbr(dossier.abbr, true);
-        setFocus({ lat, lng });
-        setTab("overview");
-        setExtra(null);
-        note(dossier.how || "Location read. Open Overview.");
+        void geocodeCensus({ data: { lat, lng } })
+          .then((hit) => {
+            if (hit) {
+              applyCensus(hit);
+              return;
+            }
+            const dossier = resolve({ asOf, lat, lng });
+            if (dossier.placeId && dossier.abbr && dossier.county && dossier.countyFips) {
+              const pt = geo.places.find((p) => p.fips === dossier.countyFips);
+              openCity(dossier.placeId, dossier.abbr, dossier.county, dossier.countyFips, pt?.x ?? 400, pt?.y ?? 300);
+              note(dossier.how);
+              return;
+            }
+            if (dossier.abbr) openAbbr(dossier.abbr, true);
+            setFocus({ lat, lng });
+            setTab("overview");
+            setExtra(null);
+            note(dossier.how || "Location read. Open Overview.");
+          })
+          .catch(() => note("The Census geocoder did not answer."));
       },
       () => note("Location permission was denied."),
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
     );
+  }
+
+  function applyCensus(hit: GeocodeHit) {
+    const g = byAbbr.get(hit.stateAbbr);
+    if (!g) {
+      note("That Census match is outside this map.");
+      return;
+    }
+    nonce.current += 1;
+    setQuery("");
+    setCensusHit(null);
+    setFrame(g.frame);
+    setSelection({ level: "county", abbr: g.abbr, name: g.name, county: hit.countyName, fips: hit.countyFips });
+    setFocus({ lat: hit.lat, lng: hit.lng });
+    setTab("overview");
+    setExtra(null);
+    void import("@/data/geo-counties.json").then((mod) => {
+      const county = mod.default.find((row) => row.fips === hit.countyFips);
+      if (!county) {
+        setCamera({ id: `addr-${hit.countyFips}-${nonce.current}`, box: asBox(g.b) });
+        return;
+      }
+      setCamera({
+        id: `addr-${hit.countyFips}-${nonce.current}`,
+        box: [county.cx - 42, county.cy - 30, county.cx + 42, county.cy + 30],
+      });
+    });
+    const placeLabel = /\b(county|parish|borough|municipality|census area|district)\b/i.test(hit.countyName)
+      ? hit.countyName
+      : `${hit.countyName} County`;
+    note(`Census matched ${hit.matched}. ${placeLabel}, FIPS ${hit.countyFips}.`);
   }
 
   function togglePin(id: string) {
@@ -457,6 +526,20 @@ export function AtlasApp() {
               role="search"
               onSubmit={(e) => {
                 e.preventDefault();
+                if (looksLikeAddress(query) && censusHit) {
+                  applyCensus(censusHit);
+                  return;
+                }
+                if (hits[0] && !looksLikeAddress(query)) {
+                  chooseHit(hits[0]);
+                  return;
+                }
+                if (looksLikeAddress(query)) {
+                  void geocodeCensus({ data: { address: query } })
+                    .then((hit) => (hit ? applyCensus(hit) : note("Census did not match that address.")))
+                    .catch(() => note("The Census geocoder did not answer."));
+                  return;
+                }
                 if (hits[0]) chooseHit(hits[0]);
               }}
             >
@@ -465,11 +548,23 @@ export function AtlasApp() {
                 ref={searchRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="City, township, county, ZIP"
-                aria-label="Search places, offices, vacancies, or names"
+                placeholder="City, street address, county, ZIP"
+                aria-label="Search places, addresses, offices, or names"
               />
-              {query.trim() && hits.length > 0 ? (
+              {query.trim() && (hits.length > 0 || censusHit || censusBusy) ? (
                 <ul className="search-pop">
+                  {censusHit ? (
+                    <li>
+                      <button type="button" onClick={() => applyCensus(censusHit)}>
+                        <span>{censusHit.matched}</span>
+                        <em>
+                          Census · {censusHit.countyName} · FIPS {censusHit.countyFips}
+                        </em>
+                      </button>
+                    </li>
+                  ) : censusBusy && looksLikeAddress(query) ? (
+                    <li className="empty-pop">Checking the Census geocoder…</li>
+                  ) : null}
                   {hits.map((h) => (
                     <li key={h.id}>
                       <button type="button" onClick={() => chooseHit(h)}>
@@ -480,8 +575,10 @@ export function AtlasApp() {
                   ))}
                 </ul>
               ) : null}
-              {query.trim() && hits.length === 0 ? (
-                <p className="search-pop empty-pop">No matches in this atlas.</p>
+              {query.trim() && hits.length === 0 && !censusHit && !censusBusy ? (
+                <p className="search-pop empty-pop">
+                  {looksLikeAddress(query) ? "Census did not match that address." : "No matches in this atlas."}
+                </p>
               ) : null}
             </form>
             <div className="icon-row">
@@ -535,6 +632,7 @@ export function AtlasApp() {
           {layersOpen ? (
             <div className="layer-pop">
               <LayerButtons mode={mapMode} onPick={(m) => { setMapMode(m); setLayersOpen(false); }} />
+              <FipsToggle on={showFips} onToggle={() => setShowFips((v) => !v)} />
             </div>
           ) : null}
         </header>
@@ -554,6 +652,7 @@ export function AtlasApp() {
           onZoomState={(abbr) => openAbbr(abbr, true)}
           onSelectCounty={openCounty}
           onHover={setHover}
+          showFips={showFips}
           onClear={() => {
             if (selection.level === "county" && selectedAbbr) {
               const g = byAbbr.get(selectedAbbr);
@@ -572,6 +671,7 @@ export function AtlasApp() {
         <aside className="legend" aria-label="Map mode">
           <p>Map mode</p>
           <LayerButtons mode={mapMode} onPick={setMapMode} />
+          <FipsToggle on={showFips} onToggle={() => setShowFips((v) => !v)} />
           <p className="legend-count">
             {seatsNow.length} vacant · {seatsNow.length} specials · {daysPhrase(asOf).replace(" to 3 Nov", "").replace(" since 3 Nov", " ago")}
           </p>
@@ -739,12 +839,26 @@ function QuestionGate({ onAsk, onClose }: { onAsk: (intent: string) => void; onC
   );
 }
 
+function looksLikeAddress(value: string): boolean {
+  const q = value.trim();
+  return q.length >= 8 && /\d/.test(q) && /[a-z]/i.test(q);
+}
+
 function ageLabel(iso: string | null, nowMs: number): string {
   if (!iso) return "…";
   const s = Math.max(0, Math.round((nowMs - Date.parse(iso)) / 1000));
   if (s < 5) return "just now";
   if (s < 60) return `${s}s ago`;
   return `${Math.floor(s / 60)}m ago`;
+}
+
+function FipsToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" className={on ? "is-on" : ""} onClick={onToggle} aria-pressed={on}>
+      <i className="sw-fips" />
+      FIPS codes
+    </button>
+  );
 }
 
 function LayerButtons({ mode, onPick }: { mode: MapMode; onPick: (m: MapMode) => void }) {

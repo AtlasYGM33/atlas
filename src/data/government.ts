@@ -17,13 +17,13 @@ import { governorOn } from "@/data/governors";
 import { NO_LIEUTENANT, lieutenantOn } from "@/data/lieutenants";
 import { NO_SECRETARY, secretaryOn } from "@/data/secretaries";
 import {
+  gazetteerJurisdiction,
   gazetteerLine,
   isGazetteerState,
   matchOhio,
   nearestOhio,
   ohioByPlaceId,
   ohioHits,
-  ohioJurisdiction,
   ohioKindLabel,
   ohioTitle,
   placeStateName,
@@ -354,7 +354,7 @@ const EXTRA: CivicEvent[] = [
     abbr: "CA",
     kind: "recall",
     title: "California gubernatorial recall",
-    body: "A governor was recalled in 2003 and a successor was elected the same day. No statewide recall is qualified on the 2026 calendar.",
+    body: "The officeholder was recalled. The officeholder was elected the same day. No statewide recall is qualified on the 2026 calendar.",
   },
   {
     id: "oh-reg",
@@ -428,7 +428,7 @@ export const VACANCY_DETAIL: Record<string, Omit<VacancyView, "id" | "abbr">> = 
   "tx-23": {
     office: "U.S. House · Texas 23rd",
     status: "vacant",
-    reason: "A resignation. The name is not in this repository.",
+    reason: "Resignation of the officeholder.",
     since: "2026-04-14",
     process: "The governor did not issue a special-election writ.",
     resolution: "The November 3 election fills the next term only. The current seat stays empty until the winner is sworn in.",
@@ -438,7 +438,7 @@ export const VACANCY_DETAIL: Record<string, Omit<VacancyView, "id" | "abbr">> = 
   "fl-20": {
     office: "U.S. House · Florida 20th",
     status: "vacant",
-    reason: "A resignation. The name is not in this repository.",
+    reason: "Resignation of the officeholder.",
     since: "2026-04-21",
     process: "Florida did not call a special election.",
     resolution: "The regular general fills the next term. The seat stays empty until the January 3, 2027 swearing-in.",
@@ -569,7 +569,7 @@ function officeFromHolder(
 }
 
 function memberOffice(m: Member, asOf: string): OfficeView {
-  const title = m.chamber === "senate" ? "U.S. Senator" : m.district ? `U.S. House · District ${m.district}` : "U.S. House";
+  const title = m.chamber === "senate" ? "U.S. Senator" : m.district ? `U.S. House · District ${m.district}` : "U.S. House · At large";
   return officeFromHolder(
     m.id,
     "federal",
@@ -674,6 +674,10 @@ function stampCensus(row: OfficeView, note: string): OfficeView {
   return row;
 }
 
+function cdTitle(district: number): string {
+  return district ? `U.S. House · District ${district}` : "U.S. House · At large";
+}
+
 function stampRel(row: OfficeView, note: string): OfficeView {
   row.note = note;
   row.url = CENSUS_REL;
@@ -757,10 +761,24 @@ function stateCountyOffices(county: string, abbr: string, fips: string | null): 
     }
     const unified = /City and Borough|Municipality/.test(county);
     if (unified) {
+      const namedSchool = fips ? gazetteerJurisdiction(`ak-boro-${fips}`)?.school : undefined;
+      const schoolRow = unpublished(
+        `${abbr}-${fips ?? county}-school`,
+        "education",
+        "School district",
+        jurisdiction,
+        namedSchool
+          ? `${namedSchool} contains the Census point for this borough. This is not a boundary. The board is not named.`
+          : "The district is not named on this row. A name is not guessed from the place.",
+      );
+      if (namedSchool) {
+        schoolRow.url = CENSUS_TIGER;
+        schoolRow.source = "U.S. Census Bureau, TIGER/Line 2024 unified school districts";
+      }
       return [
         ak("mayor", "Mayor", "Unified municipality. The holder is not in the published roll on this date."),
         ak("assembly", "Assembly", "Members are not listed."),
-        unpublished(`${abbr}-${fips ?? county}-school`, "education", "School district", jurisdiction, "The district is not named on this row. A name is not guessed from the place."),
+        schoolRow,
       ];
     }
     return [
@@ -789,11 +807,12 @@ function stateCountyOffices(county: string, abbr: string, fips: string | null): 
 
 /** Offices that exist for this place. Names stay blank. */
 function ohioOffices(unit: OhioUnit): OfficeView[] {
-  const namedSchool = unit.abbr === "OH" ? ohioJurisdiction(unit.id)?.school : undefined;
+  const namedSchool = gazetteerJurisdiction(unit.id)?.school;
   const school = () => {
     const row = unpublished(`${unit.id}-school`, "education", "School district", namedSchool ?? unit.name, "");
     if (!namedSchool) return stampCensus(row, "The district is not named on this row. A name is not guessed from the place.");
-    row.note = `${namedSchool} contains the Census point for this place. The corporation may cross another district. This is not a boundary. The board is not named.`;
+    const verb = namedSchool.includes(" and ") ? "contain" : "contains";
+    row.note = `${namedSchool} ${verb} the Census point for this place. The corporation may cross another district. This is not a boundary. The board is not named.`;
     row.url = CENSUS_TIGER;
     row.source = "U.S. Census Bureau, TIGER/Line 2024 unified school districts";
     return row;
@@ -948,7 +967,7 @@ function vacanciesFor(asOf: string, abbr: string | null): VacancyView[] {
           abbr: "OH",
           office: "Governor",
           status: "upcoming",
-          reason: "The governor is in a second consecutive term and cannot run in 2026.",
+          reason: "The officeholder is in a second consecutive term and cannot run in 2026.",
           since: "2019-01-14",
           process: "Ohio elects a governor on November 3, 2026.",
           resolution: "The office stays filled until the successor is sworn in January 2027.",
@@ -959,10 +978,10 @@ function vacanciesFor(asOf: string, abbr: string | null): VacancyView[] {
     }
     if (abbr === "OH") {
       const rowOffices = [
-        { id: "oh-auditor-2026", office: "Auditor of state", reason: "The auditor of state is term-limited and was not a candidate for this office." },
-        { id: "oh-treasurer-2026", office: "Treasurer of state", reason: "The treasurer of state is term-limited and was not a candidate for this office." },
-        { id: "oh-ag-2026", office: "Attorney general", reason: "The attorney general is term-limited for this office." },
-        { id: "oh-sos-2026", office: "Secretary of state", reason: "The secretary of state is term-limited and was a candidate for a different office." },
+        { id: "oh-auditor-2026", office: "Auditor of state", reason: "The officeholder is term-limited. He was not a candidate for auditor." },
+        { id: "oh-treasurer-2026", office: "Treasurer of state", reason: "The officeholder is term-limited. He was not a candidate for treasurer." },
+        { id: "oh-ag-2026", office: "Attorney general", reason: "The officeholder is term-limited for this office." },
+        { id: "oh-sos-2026", office: "Secretary of state", reason: "The officeholder is term-limited. He was a candidate for auditor, not for this office." },
       ];
       for (const row of rowOffices) {
         if (rows.some((r) => r.id === row.id)) continue;
@@ -1118,7 +1137,7 @@ export function resolve(input: {
     const members = membersOn(asOf, abbr).flatMap((g) => g.members);
     const senators = members.filter((m) => m.chamber === "senate");
     for (const m of senators) offices.push(memberOffice(m, asOf));
-    const j = ohio?.abbr === "OH" ? ohioJurisdiction(ohio.id) : undefined;
+    const j = ohio ? gazetteerJurisdiction(ohio.id) : undefined;
     const in119 = asOf >= "2025-01-03" && asOf < "2027-01-03";
     if (j?.cd?.length === 1 && in119) {
       const district = j.cd[0] ?? 0;
@@ -1127,8 +1146,10 @@ export function resolve(input: {
       else {
         offices.push(
           stampRel(
-            unpublished(`${abbr}-h-${district}`, "federal", `U.S. House · District ${district}`, state.name, ""),
-            `No member is seated for district ${district} on ${formatSlash(asOf)}.`,
+            unpublished(`${abbr}-h-${district}`, "federal", cdTitle(district), state.name, ""),
+            district
+              ? `No member is seated for district ${district} on ${formatSlash(asOf)}.`
+              : `No member is seated for the at-large seat on ${formatSlash(asOf)}.`,
           ),
         );
       }
@@ -1136,8 +1157,10 @@ export function resolve(input: {
       const district = j.cd[0] ?? 0;
       offices.push(
         stampRel(
-          unpublished(`${abbr}-h-${district}`, "federal", `U.S. House · District ${district}`, state.name, ""),
-          "This number is the 119th Congress map. A member is named only while that Congress is seated. Older district numbers are not these lines.",
+          unpublished(`${abbr}-h-${district}`, "federal", cdTitle(district), state.name, ""),
+          district
+            ? "This number is the 119th Congress map. A member is named only while that Congress is seated. Older district numbers are not these lines."
+            : "This is the 119th Congress at-large seat. A member is named only while that Congress is seated.",
         ),
       );
     } else if (j?.cd && j.cd.length > 1) {
@@ -1292,7 +1315,9 @@ export function resolve(input: {
       offices.push(
         stampRel(
           unpublished(`${abbr}-house-state-${district}`, "state", `State house · District ${district}`, state.name, ""),
-          "District number from the Census 2024 state-house relationship file. The member is not in the published roll. The November 3, 2026 winner is not seated.",
+          abbr === "AZ"
+            ? "District number from the Census 2024 state-house relationship file. Arizona elects two representatives from this district. Neither is in the published roll. The November 3, 2026 winner is not seated."
+            : "District number from the Census 2024 state-house relationship file. The member is not in the published roll. The November 3, 2026 winner is not seated.",
         ),
       );
     } else if (j?.house && j.house.length > 1) {
@@ -1568,14 +1593,4 @@ export function recallNote(abbr: string | null): string {
   if (!abbr) return "Eighteen states on this list allow a recall of at least some state officers. None is qualified for 2026 in the loaded calendar.";
   if (RECALL_STATES.includes(abbr)) return `${abbr} allows recall of at least some state officers. None is qualified for 2026 in the loaded calendar. The 2003 California recall stays on the historical calendar.`;
   return `${abbr} is not on the loaded recall list. That is not a ruling that recall is impossible. It means this publish has no qualified recall.`;
-}
-
-export function apiCatalog() {
-  return [
-    { method: "GET", path: "/api/v1/location?q=Columbus,%20OH&date=2026-11-07", note: "Address, city, ZIP, or county to the governments that apply." },
-    { method: "GET", path: "/api/v1/location?lat=39.9612&lng=-82.9988&compare=2020-08-21", note: "A point, and an optional second date." },
-    { method: "GET", path: "/api/v1/offices?q=Chicago&date=2026-11-07", note: "The office list only." },
-    { method: "GET", path: "/api/v1/vacancies?abbr=TX&date=2026-11-07", note: "Reason, process, and how the vacancy ends." },
-    { method: "GET", path: "/api/v1/elections?abbr=GA&kind=runoff", note: "Calendar, including runoff, recall, and mail deadlines." },
-  ];
 }

@@ -22,6 +22,7 @@ type Props = {
   onSelectCounty: (fips: string, name: string, abbr: string) => void;
   onHover: (text: string | null) => void;
   onClear: () => void;
+  showFips: boolean;
 };
 
 function presentation(abbr: string, mode: MapMode, vacant: ReadonlySet<string>): string {
@@ -103,6 +104,7 @@ export function MapCanvas({
   onSelectCounty,
   onHover,
   onClear,
+  showFips,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const moved = useRef(false);
@@ -282,7 +284,7 @@ export function MapCanvas({
                 className={"jurisdiction" + (selectedAbbr === g.abbr ? " is-selected" : "")}
                 onPointerEnter={() => {
                   setHoverCounty(null);
-                  onHover(gov ? `${g.name} · ${gov.short}` : g.name);
+                  onHover(showFips ? `${g.name} · FIPS ${g.fips}` : gov ? `${g.name} · ${gov.short}` : g.name);
                 }}
               >
                 <title>{gov ? `${g.name} · ${gov.name}` : g.name}</title>
@@ -325,10 +327,10 @@ export function MapCanvas({
             className={"county" + (selectedCounty === c.fips ? " is-selected" : "")}
             onPointerEnter={() => {
               setHoverCounty(c.fips);
-              onHover(`${c.name} County`);
+              onHover(showFips ? `${c.name} · FIPS ${c.fips}` : `${c.name} County`);
             }}
           >
-            <title>{c.name}</title>
+            <title>{showFips ? `${c.name} · FIPS ${c.fips}` : c.name}</title>
           </path>
         ))}
         {frame === "nation"
@@ -380,6 +382,41 @@ export function MapCanvas({
                   {c.name}
                 </text>
               ))
+          : null}
+        {showFips && countyRows.length === 0
+          ? visible.map((g) => {
+              const w = g.b[2] - g.b[0];
+              if (w < 14 && view.w >= 400) return null;
+              return (
+                <text
+                  key={`${g.abbr}-fips`}
+                  className="fips-label"
+                  x={g.cx}
+                  y={g.cy + (w < 28 ? 9 : 13)}
+                  textAnchor="middle"
+                  fontSize={w < 28 ? 5.5 : 7}
+                  strokeWidth={0.6}
+                >
+                  {g.fips}
+                </text>
+              );
+            })
+          : null}
+        {showFips
+          ? countyRows.map((c) => (
+              <text
+                key={`${c.fips}-fips`}
+                className="fips-label"
+                x={c.cx}
+                y={c.cy}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize={Math.max(2.4, Math.min(6, view.w / 42))}
+                strokeWidth={0.35}
+              >
+                {c.fips}
+              </text>
+            ))
           : null}
       </svg>
       <div className="zoom-stack">

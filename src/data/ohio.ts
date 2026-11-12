@@ -4,10 +4,15 @@
  *  Alaska census areas are statistical and are not listed.
  *  No officeholder is stored in this file. */
 
+import alabamaJurisdictions from "@/data/alabama-jurisdictions.json";
 import alabamaUnits from "@/data/alabama-units.json";
+import alaskaJurisdictions from "@/data/alaska-jurisdictions.json";
 import alaskaUnits from "@/data/alaska-units.json";
+import arizonaJurisdictions from "@/data/arizona-jurisdictions.json";
 import arizonaUnits from "@/data/arizona-units.json";
+import indianaJurisdictions from "@/data/indiana-jurisdictions.json";
 import indianaUnits from "@/data/indiana-units.json";
+import kentuckyJurisdictions from "@/data/kentucky-jurisdictions.json";
 import kentuckyUnits from "@/data/kentucky-units.json";
 import ohioJurisdictions from "@/data/ohio-jurisdictions.json";
 import ohioUnits from "@/data/ohio-units.json";
@@ -156,15 +161,23 @@ export function ohioByLetter(letter: string, abbr = "OH"): OhioUnit[] {
 
 export type OhioJurisdiction = {
   cd?: number[];
-  senate?: number[];
+  /** Alaska senate districts are letters. Every other state uses a number. */
+  senate?: Array<number | string>;
   house?: number[];
   school?: string;
 };
 
-const JURIS = ohioJurisdictions as Record<string, OhioJurisdiction>;
+const JURIS = {
+  ...ohioJurisdictions,
+  ...indianaJurisdictions,
+  ...kentuckyJurisdictions,
+  ...alabamaJurisdictions,
+  ...alaskaJurisdictions,
+  ...arizonaJurisdictions,
+} as Record<string, OhioJurisdiction>;
 
-/** Census district overlap for an Ohio government. School is the district at the Census point. */
-export function ohioJurisdiction(id: string): OhioJurisdiction | undefined {
+/** Census district overlap for a gazetteer government. School is the district at the Census point. */
+export function gazetteerJurisdiction(id: string): OhioJurisdiction | undefined {
   return JURIS[id];
 }
 

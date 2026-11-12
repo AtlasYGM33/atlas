@@ -10,98 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiV1RouteImport } from './routes/api/v1'
-import { Route as ApiV1ElectionsRouteImport } from './routes/api/v1/elections'
-import { Route as ApiV1LocationRouteImport } from './routes/api/v1/location'
-import { Route as ApiV1OfficesRouteImport } from './routes/api/v1/offices'
-import { Route as ApiV1VacanciesRouteImport } from './routes/api/v1/vacancies'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1Route = ApiV1RouteImport.update({
-  id: '/api/v1',
-  path: '/api/v1',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1ElectionsRoute = ApiV1ElectionsRouteImport.update({
-  id: '/elections',
-  path: '/elections',
-  getParentRoute: () => ApiV1Route,
-} as any)
-const ApiV1LocationRoute = ApiV1LocationRouteImport.update({
-  id: '/location',
-  path: '/location',
-  getParentRoute: () => ApiV1Route,
-} as any)
-const ApiV1OfficesRoute = ApiV1OfficesRouteImport.update({
-  id: '/offices',
-  path: '/offices',
-  getParentRoute: () => ApiV1Route,
-} as any)
-const ApiV1VacanciesRoute = ApiV1VacanciesRouteImport.update({
-  id: '/vacancies',
-  path: '/vacancies',
-  getParentRoute: () => ApiV1Route,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/api/v1': typeof ApiV1RouteWithChildren
-  '/api/v1/elections': typeof ApiV1ElectionsRoute
-  '/api/v1/location': typeof ApiV1LocationRoute
-  '/api/v1/offices': typeof ApiV1OfficesRoute
-  '/api/v1/vacancies': typeof ApiV1VacanciesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/api/v1': typeof ApiV1RouteWithChildren
-  '/api/v1/elections': typeof ApiV1ElectionsRoute
-  '/api/v1/location': typeof ApiV1LocationRoute
-  '/api/v1/offices': typeof ApiV1OfficesRoute
-  '/api/v1/vacancies': typeof ApiV1VacanciesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/api/v1': typeof ApiV1RouteWithChildren
-  '/api/v1/elections': typeof ApiV1ElectionsRoute
-  '/api/v1/location': typeof ApiV1LocationRoute
-  '/api/v1/offices': typeof ApiV1OfficesRoute
-  '/api/v1/vacancies': typeof ApiV1VacanciesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/api/v1'
-    | '/api/v1/elections'
-    | '/api/v1/location'
-    | '/api/v1/offices'
-    | '/api/v1/vacancies'
+  fullPaths: '/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/api/v1'
-    | '/api/v1/elections'
-    | '/api/v1/location'
-    | '/api/v1/offices'
-    | '/api/v1/vacancies'
-  id:
-    | '__root__'
-    | '/'
-    | '/api/v1'
-    | '/api/v1/elections'
-    | '/api/v1/location'
-    | '/api/v1/offices'
-    | '/api/v1/vacancies'
+  to: '/'
+  id: '__root__' | '/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApiV1Route: typeof ApiV1RouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -113,63 +48,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1': {
-      id: '/api/v1'
-      path: '/api/v1'
-      fullPath: '/api/v1'
-      preLoaderRoute: typeof ApiV1RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/elections': {
-      id: '/api/v1/elections'
-      path: '/elections'
-      fullPath: '/api/v1/elections'
-      preLoaderRoute: typeof ApiV1ElectionsRouteImport
-      parentRoute: typeof ApiV1Route
-    }
-    '/api/v1/location': {
-      id: '/api/v1/location'
-      path: '/location'
-      fullPath: '/api/v1/location'
-      preLoaderRoute: typeof ApiV1LocationRouteImport
-      parentRoute: typeof ApiV1Route
-    }
-    '/api/v1/offices': {
-      id: '/api/v1/offices'
-      path: '/offices'
-      fullPath: '/api/v1/offices'
-      preLoaderRoute: typeof ApiV1OfficesRouteImport
-      parentRoute: typeof ApiV1Route
-    }
-    '/api/v1/vacancies': {
-      id: '/api/v1/vacancies'
-      path: '/vacancies'
-      fullPath: '/api/v1/vacancies'
-      preLoaderRoute: typeof ApiV1VacanciesRouteImport
-      parentRoute: typeof ApiV1Route
-    }
   }
 }
 
-interface ApiV1RouteChildren {
-  ApiV1ElectionsRoute: typeof ApiV1ElectionsRoute
-  ApiV1LocationRoute: typeof ApiV1LocationRoute
-  ApiV1OfficesRoute: typeof ApiV1OfficesRoute
-  ApiV1VacanciesRoute: typeof ApiV1VacanciesRoute
-}
-
-const ApiV1RouteChildren: ApiV1RouteChildren = {
-  ApiV1ElectionsRoute: ApiV1ElectionsRoute,
-  ApiV1LocationRoute: ApiV1LocationRoute,
-  ApiV1OfficesRoute: ApiV1OfficesRoute,
-  ApiV1VacanciesRoute: ApiV1VacanciesRoute,
-}
-
-const ApiV1RouteWithChildren = ApiV1Route._addFileChildren(ApiV1RouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApiV1Route: ApiV1RouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

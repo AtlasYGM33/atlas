@@ -43,6 +43,11 @@ type Selection =
   | { level: "state"; abbr: string; name: string }
   | { level: "county"; abbr: string; name: string; county: string; fips: string };
 
+function countyLine(name: string): string {
+  if (/\b(county|parish|borough|municipality|census area|district)\b/i.test(name)) return name;
+  return `${name} County`;
+}
+
 type Props = {
   selection: Selection;
   asOf: string;
@@ -92,7 +97,7 @@ function blurb(selection: Selection): string {
     return "50 states, the District of Columbia, and five territories. Zoom in for counties.";
   }
   if (selection.level === "county") {
-    return `${selection.county} County, ${selection.name}. County lines appear when you zoom. Atlas does not invent local returns.`;
+    return `${countyLine(selection.county)}, ${selection.name}. County lines appear when you zoom. Atlas does not invent local returns.`;
   }
   const seats = HOUSE_SEATS[selection.abbr];
   const capital = CAPITALS[selection.abbr];
@@ -140,7 +145,7 @@ export function Inspector(props: Props) {
       ? `${ohioHere.county} County, ${placeStateName(ohioHere.abbr)}. The holder is unpublished unless a source is already on the row.`
       : blurb(selection);
   const followId = city?.id ?? (abbr ? `state:${abbr}` : "nation");
-  const followLabel = city?.city ?? (ohioHere ? ohioTitle(ohioHere) : selection.level === "county" ? `${selection.county} County` : selection.level === "state" ? selection.name : "United States");
+  const followLabel = city?.city ?? (ohioHere ? ohioTitle(ohioHere) : selection.level === "county" ? countyLine(selection.county) : selection.level === "state" ? selection.name : "United States");
   const following = follows.some((f) => f.id === followId);
 
   return (
@@ -561,7 +566,7 @@ function Overview({
       ? ["United States"]
       : selection.level === "state"
         ? ["United States", selection.name]
-        : ["United States", selection.name, `${selection.county} County`];
+        : ["United States", selection.name, `${countyLine(selection.county)} · FIPS ${selection.fips}`];
   const admin = administrationOn(asOf);
   const gov = abbr ? governorOn(asOf, abbr) : null;
   return (

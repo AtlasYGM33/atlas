@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ELIGIBILITY,
   alertsFor,
-  apiCatalog,
   calendarEvents,
   compareDossiers,
   mailRule,
@@ -189,7 +188,6 @@ export function GovernmentPanel({
       ) : null}
 
       <MailAndRecall abbr={dossier.abbr} />
-      <ApiCard dossier={dossier} asOf={asOf} />
     </div>
   );
 }
@@ -262,34 +260,6 @@ function MailAndRecall({ abbr }: { abbr: string | null }) {
         <p>Open a state. The return rule is published for every state and the District.</p>
       )}
       <p>{recallNote(abbr)}</p>
-    </article>
-  );
-}
-
-function ApiCard({ dossier, asOf }: { dossier: Dossier; asOf: string }) {
-  const sample = dossier.placeId
-    ? `/api/v1/location?q=${encodeURIComponent(dossier.title)}&date=${asOf}`
-    : dossier.abbr
-      ? `/api/v1/location?q=${dossier.abbr}&date=${asOf}`
-      : `/api/v1/vacancies?date=${asOf}`;
-  return (
-    <article className="card static">
-      <p className="kicker">Public API</p>
-      <h3>Same records, no map</h3>
-      <p>Version 1 is read-only. A missing holder comes back as unpublished. It is never filled in.</p>
-      <p className="api-path">{sample}</p>
-      <ul className="sources">
-        {apiCatalog().map((row) => (
-          <li key={row.path}>
-            <a href={row.path} target="_blank" rel="noreferrer">
-              <span>
-                {row.method} {row.path}
-                <em>{row.note}</em>
-              </span>
-            </a>
-          </li>
-        ))}
-      </ul>
     </article>
   );
 }

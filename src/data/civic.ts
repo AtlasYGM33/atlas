@@ -65,7 +65,96 @@ export type Measure = {
   scope: "nation" | "state";
 };
 
-export const MEASURES: Measure[] = [];
+export const MEASURES: Measure[] = [
+  {
+    id: "ak-bm2",
+    abbr: "AK",
+    kicker: "ALASKA · BALLOT MEASURE 2 · STATUTE",
+    title: "Repeal top-four ranked-choice voting",
+    body: "Would repeal Alaska's top-four primary and ranked-choice general election system and restore party primaries.",
+    scope: "nation",
+  },
+  {
+    id: "ak-bm3",
+    abbr: "AK",
+    kicker: "ALASKA · BALLOT MEASURE 3 · CONSTITUTIONAL",
+    title: "Citizenship voting",
+    body: "Constitutional amendment stating that only U.S. citizens may vote in Alaska elections.",
+    scope: "nation",
+  },
+  {
+    id: "az-141",
+    abbr: "AZ",
+    kicker: "ARIZONA · PROPOSITION 141 · CONSTITUTIONAL",
+    title: "Vehicle-miles-traveled tax prohibition",
+    body: "Would prohibit the state from imposing a tax or fee based on vehicle miles traveled.",
+    scope: "nation",
+  },
+  {
+    id: "ca-packet",
+    abbr: "CA",
+    kicker: "CALIFORNIA · STATUTE",
+    title: "Statewide propositions (certified packet)",
+    body: "California's 3 Nov 2026 ballot includes a large certified packet of housing, fiscal, education, campaign-finance, recall, and voter-identification measures. Atlas lists individual proposition titles after the Secretary of State publishes the official ballot pamphlet.",
+    scope: "nation",
+  },
+  {
+    id: "co-packet",
+    abbr: "CO",
+    kicker: "COLORADO · CONSTITUTIONAL",
+    title: "Statewide amendments and propositions",
+    body: "Colorado certified 14 statewide measures for 2026, including numbered constitutional amendments beginning with Amendment 81. Individual titles follow the official blue book.",
+    scope: "nation",
+  },
+  {
+    id: "az-142",
+    abbr: "AZ",
+    kicker: "ARIZONA · PROPOSITION 142 · CONSTITUTIONAL",
+    title: "Preferential treatment",
+    body: "Would prohibit government from requiring a person to endorse preferential treatment or discrimination on the basis of race or ethnicity.",
+    scope: "state",
+  },
+  {
+    id: "az-144",
+    abbr: "AZ",
+    kicker: "ARIZONA · PROPOSITION 144 · CONSTITUTIONAL",
+    title: "Citizenship and voter identification",
+    body: "Would state that only citizens may vote in any Arizona election and require government-issued identification to cast a ballot.",
+    scope: "state",
+  },
+  {
+    id: "co-81",
+    abbr: "CO",
+    kicker: "COLORADO · AMENDMENT 81 · CONSTITUTIONAL",
+    title: "Immigration notification",
+    body: "Would require law enforcement to notify the U.S. Department of Homeland Security when a person is charged with a crime of violence, or has a prior felony, and immigration status cannot be determined.",
+    scope: "state",
+  },
+  {
+    id: "co-82",
+    abbr: "CO",
+    kicker: "COLORADO · AMENDMENT 82 · CONSTITUTIONAL",
+    title: "Natural gas",
+    body: "Would provide a constitutional right for consumers to purchase natural gas for cooking or heating, and for utilities to sell it for those uses.",
+    scope: "state",
+  },
+  {
+    id: "co-83",
+    abbr: "CO",
+    kicker: "COLORADO · AMENDMENT 83 · CONSTITUTIONAL",
+    title: "Right to hunt and fish",
+    body: "Would establish a right to hunt, fish, and take wildlife by traditional methods, with regulation left to the legislature and state agencies.",
+    scope: "state",
+  },
+  {
+    id: "co-84",
+    abbr: "CO",
+    kicker: "COLORADO · AMENDMENT 84 · CONSTITUTIONAL",
+    title: "Mail ballot identification",
+    body: "Would require a voter returning a mail ballot to include a signature and a form of REAL ID.",
+    scope: "state",
+  },
+];
 
 export type Seat = {
   id: string;
@@ -99,11 +188,19 @@ export type CalEvent = {
 };
 
 export const CALENDAR: CalEvent[] = [
-  { id: "term-open", date: "2025-01-20", abbr: null, kind: "term", title: "Current term begins", body: "The public atlas window includes the presidential inauguration." },
-  { id: "verified", date: "2026-09-18", abbr: null, kind: "deadline", title: "Atlas verification pass", body: "A verification date for the loaded public window. Named rolls are not in this repository." },
+  { id: "term-open", date: "2025-01-20", abbr: null, kind: "term", title: "Current term begins", body: "The public atlas has been live since January 1, 2025. This date is the presidential inauguration inside that window." },
+  { id: "tx-primary", date: "2026-03-03", abbr: "TX", kind: "primary", title: "Texas primary", body: "Texas held its primary on March 3, 2026, including the nomination for the 23rd district." },
+  { id: "tx-resign", date: "2026-04-14", abbr: "TX", kind: "term", title: "TX-23 becomes vacant", body: "The officeholder's resignation took effect. No special election was called." },
+  { id: "fl-resign", date: "2026-04-21", abbr: "FL", kind: "term", title: "FL-20 becomes vacant", body: "The officeholder resigned. No special election was called." },
+  { id: "fl-primary", date: "2026-08-18", abbr: "FL", kind: "primary", title: "Florida closed primary", body: "Florida's primary was August 18, 2026." },
+  { id: "verified", date: "2026-09-18", abbr: null, kind: "deadline", title: "Atlas verification pass", body: "Office vacancies and the certified-measure list were checked against public reports." },
   { id: "uocava", date: "2026-09-19", abbr: null, kind: "deadline", title: "Federal overseas/military ballot window (UOCAVA)", body: "Overseas · United States" },
   { id: "general", date: "2026-11-03", abbr: null, kind: "election", title: "2026 Midterm General Election", body: "General · United States" },
-  { id: "swear", date: "2027-01-03", abbr: null, kind: "term", title: "120th Congress sworn in", body: "Winners of the November House and Senate elections take office." },
+  { id: "az-canvass", date: "2026-11-23", abbr: "AZ", kind: "deadline", title: "Arizona state canvass", body: "Deadline for the official state canvass of the November 3 general election." },
+  { id: "ak-canvass", date: "2026-11-25", abbr: "AK", kind: "deadline", title: "Alaska certification target", body: "Target date to certify the general election." },
+  { id: "co-canvass", date: "2026-11-30", abbr: "CO", kind: "deadline", title: "Colorado canvass upload", body: "Deadline to upload final canvass results for the 2026 general election." },
+  { id: "ca-canvass", date: "2026-12-11", abbr: "CA", kind: "deadline", title: "California statement of vote", body: "Last day for the Secretary of State to certify and file the statement of the vote." },
+  { id: "swear", date: "2027-01-03", abbr: null, kind: "term", title: "120th Congress sworn in", body: "Winners of the November House and Senate elections take office. Vacancies in the 119th Congress end here." },
   { id: "term-close", date: "2027-01-20", abbr: null, kind: "term", title: "Public map window closes", body: "The free public map's published window ends January 20, 2027." },
 ];
 
@@ -182,7 +279,7 @@ export const CONGRESS = {
   source: "Clerk of the House official list of members, 2 September 2026",
 };
 
-export const FEDERAL_OFFICES = [];
+export const FEDERAL_OFFICES = [] as const;
 
 export function nextEvent(asOf: string, abbr: string | null): CalEvent | null {
   return (
