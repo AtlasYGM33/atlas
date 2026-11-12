@@ -12,7 +12,7 @@ import {
   type Focus,
   type Follow,
 } from "@/data/government";
-import { gazetteerLine, isGazetteerState, ohioByLetter, ohioByPlaceId, ohioKindLabel, placeStateName, placeWhere, verifiedPlaceId } from "@/data/ohio";
+import { countyHeading, gazetteerLine, isGazetteerState, ohioByLetter, ohioByPlaceId, ohioKindLabel, placeStateName, placeWhere, verifiedPlaceId } from "@/data/ohio";
 import { formatSlash } from "@/data/civic";
 
 const LEVEL: Record<string, string> = {
@@ -219,7 +219,9 @@ function OhioIndex({ abbr, placeId, onOpen }: { abbr: string; placeId?: string; 
           const on = placeId === unit.id || placeId === verifiedPlaceId(unit);
           const where = placeWhere(unit);
           const kindLabel =
-            unit.kind === "borough"
+            unit.kind === "county" && unit.abbr === "LA"
+              ? "Parish"
+              : unit.kind === "borough"
               ? unit.name.includes("Municipality")
                 ? "Municipality"
                 : unit.name.includes("City and Borough")
@@ -230,7 +232,7 @@ function OhioIndex({ abbr, placeId, onOpen }: { abbr: string; placeId?: string; 
           return (
             <li key={unit.id}>
               <button type="button" className={on ? "is-on" : ""} onClick={() => onOpen(unit.id)}>
-                <span>{unit.kind === "county" ? `${unit.name} County` : unit.name}</span>
+                <span>{unit.kind === "county" ? countyHeading(unit.name, unit.abbr) : unit.name}</span>
                 <em>
                   {kindLabel} · {where}
                   {quiet}

@@ -327,7 +327,7 @@ export function MapCanvas({
             className={"county" + (selectedCounty === c.fips ? " is-selected" : "")}
             onPointerEnter={() => {
               setHoverCounty(c.fips);
-              onHover(showFips ? `${c.name} · FIPS ${c.fips}` : `${c.name} County`);
+              onHover(showFips ? `${c.name} · FIPS ${c.fips}` : c.fips.startsWith("22") ? `${c.name} Parish` : `${c.name} County`);
             }}
           >
             <title>{showFips ? `${c.name} · FIPS ${c.fips}` : c.name}</title>

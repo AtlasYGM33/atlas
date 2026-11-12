@@ -32,7 +32,7 @@ import { resultsOn } from "@/data/results";
 import { NO_SECRETARY, secretaryOn } from "@/data/secretaries";
 import { justiceRole, nationalCourt, stateCourts, type Bench } from "@/data/courts";
 import { VACANCY_DETAIL, calendarEvents, placeById, type Follow } from "@/data/government";
-import { gazetteerLine, isGazetteerState, ohioByPlaceId, ohioTitle, placeStateName } from "@/data/ohio";
+import { gazetteerLine, isGazetteerState, ohioByPlaceId, ohioTitle, placeStateName, placeWhere } from "@/data/ohio";
 import { FollowAlerts, GovernmentPanel } from "@/components/atlas/GovernmentPanel";
 
 export type TabId = "overview" | "offices" | "courts" | "candidates" | "calendar" | "vacancies" | "sources";
@@ -142,7 +142,7 @@ export function Inspector(props: Props) {
   const lede = city
     ? `${city.county} County, ${selection.level === "nation" ? "Ohio" : selection.level === "state" ? selection.name : selection.name}.`
     : ohioHere && ohioHere.kind !== "county"
-      ? `${ohioHere.county} County, ${placeStateName(ohioHere.abbr)}. The holder is unpublished unless a source is already on the row.`
+      ? `${placeWhere(ohioHere)}${placeWhere(ohioHere) === placeStateName(ohioHere.abbr) ? "" : `, ${placeStateName(ohioHere.abbr)}`}. The holder is unpublished unless a source is already on the row.`
       : blurb(selection);
   const followId = city?.id ?? (abbr ? `state:${abbr}` : "nation");
   const followLabel = city?.city ?? (ohioHere ? ohioTitle(ohioHere) : selection.level === "county" ? countyLine(selection.county) : selection.level === "state" ? selection.name : "United States");
@@ -254,7 +254,7 @@ export function Inspector(props: Props) {
           {archive && !isGazetteerState(abbr)
             ? "The archive is a licensed corpus. This screen does not include those rolls."
             : archive && isGazetteerState(abbr)
-              ? "Ohio, Indiana, Kentucky, Alabama, Alaska, and Arizona stay on this date. Congress and the U.S. Supreme Court before 01/01/2025 stay in the licensed archive. A local holder stays unpublished without a source."
+              ? "Every state in the directory stays on this date. Congress and the U.S. Supreme Court before 01/01/2025 stay in the licensed archive. A local holder stays unpublished without a source."
               : "Live public map since 01/01/2025. Not an official canvass. This feed does not publish unofficial vote totals."}
         </p>
       </div>

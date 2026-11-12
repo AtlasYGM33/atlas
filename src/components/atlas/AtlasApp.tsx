@@ -737,7 +737,7 @@ export function AtlasApp() {
           <p className="fine">
             {archive
               ? isGazetteerState(selectedAbbr)
-                ? "Ohio, Indiana, Kentucky, Alabama, Alaska, and Arizona stay open on this date. Dated state officers change with the slider. Local holders stay unpublished. Congress and the U.S. Supreme Court stay licensed."
+                ? "Every state in the directory stays open on this date. Dated state officers change with the slider. Local holders stay unpublished. Congress and the U.S. Supreme Court stay licensed."
                 : "President, vice president, and governors stay visible back to 01/01/2000. Congress and the U.S. Supreme Court from that date are in the licensed archive."
               : headline}
           </p>
@@ -981,7 +981,7 @@ function buildHits(query: string): Hit[] {
       if (!abbr) continue;
       hits.push({
         id: `p-${place.fips}`,
-        label: `${place.name} County`,
+        label: place.fips.startsWith("22") ? `${place.name} Parish` : `${place.name} County`,
         hint: abbr,
         abbr,
         county: place.name,

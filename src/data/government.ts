@@ -3,6 +3,7 @@
  *  The date on the record is the date the person held the office, not a guess about tomorrow.
  */
 
+import { COUNTY_FORM, NYC_COUNTY, VARYING_COUNTY, lowerChamber, lowerNote, upperChamber } from "@/data/county-forms";
 import geo from "@/data/geo-states.json";
 import {
   CALENDAR,
@@ -17,11 +18,14 @@ import { governorOn } from "@/data/governors";
 import { NO_LIEUTENANT, lieutenantOn } from "@/data/lieutenants";
 import { NO_SECRETARY, secretaryOn } from "@/data/secretaries";
 import {
+  countyHeading,
   gazetteerJurisdiction,
   gazetteerLine,
   isGazetteerState,
+  isIndependent,
   matchOhio,
   nearestOhio,
+  ohioById,
   ohioByPlaceId,
   ohioHits,
   ohioKindLabel,
@@ -667,6 +671,14 @@ const CENSUS_GAZETTEER = "https://www.census.gov/geographies/reference-files/tim
 const CENSUS_REL = "https://www.census.gov/geographies/reference-files/time-series/geo/relationship-files.html";
 const CENSUS_TIGER = "https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html";
 
+function hawaiiSchool(fips: string): OfficeView {
+  const row = unpublished(`HI-${fips}-school`, "education", "School district", "Hawaii Department of Education", "");
+  row.note = "Hawaii has one statewide school district. This is not a boundary drawn around the county. The board is not named.";
+  row.url = CENSUS_GAZETTEER;
+  row.source = "U.S. Census Bureau, 2024 Gazetteer";
+  return row;
+}
+
 function stampCensus(row: OfficeView, note: string): OfficeView {
   row.note = note;
   row.url = CENSUS_GAZETTEER;
@@ -686,9 +698,44 @@ function stampRel(row: OfficeView, note: string): OfficeView {
 }
 
 function stateCountyOffices(county: string, abbr: string, fips: string | null): OfficeView[] {
-  const name = `${county} County`;
+  const name = countyHeading(county, abbr);
   const note = "The office applies. The holder is not in the published roll, so no name is shown.";
   const row = (id: string, title: string, extra = note) => unpublished(`${abbr}-${fips ?? county}-${id}`, "county", title, name, extra);
+  const unit = fips ? ohioById(`${abbr.toLowerCase()}-county-${fips}`) : undefined;
+  if (fips && isIndependent(fips)) {
+    const cityName = /city$/i.test(county) ? county : `${county} City`;
+    return [
+      unpublished(
+        `${abbr}-${fips}-independent`,
+        "county",
+        "Independent city",
+        cityName,
+        "This city is not inside a county. The mayor and the council are the local government. No separate county board is seated.",
+      ),
+    ];
+  }
+  if (fips && NYC_COUNTY.has(fips)) {
+    return [row("nyc", "New York City", "This county is a borough of New York City. The mayor and the council are citywide. No separate county board is seated.")];
+  }
+  if (fips === "15005") {
+    return [
+      row("health", "State administration", "Kalawao County is administered by the Hawaii Department of Health. No elected county board is seated."),
+      hawaiiSchool(fips),
+    ];
+  }
+  if (abbr === "HI") {
+    return [
+      row("mayor", "Mayor", "The holder is not in the published roll on this date."),
+      row("council", "County council", "Members are not listed."),
+      hawaiiSchool(fips ?? county),
+    ];
+  }
+  if (unit?.func === "N" || unit?.func === "I" || abbr === "CT" || abbr === "RI") {
+    return [row("government", "County government", "Census does not list a functioning county government here. No officers are seated.")];
+  }
+  if (unit?.func === "C" || unit?.func === "B") {
+    return [row("consolidated", "Consolidated government", "This county government is consolidated with a municipality. The mayor and the council are on that row when the atlas has one. No separate county board is assumed, and no holder is named.")];
+  }
   if (abbr === "IN" && fips === "18097") {
     return [
       row(
@@ -802,6 +849,11 @@ function stateCountyOffices(county: string, abbr: string, fips: string | null): 
       ["clerk", "Clerk of the superior court"],
     ].map(([id, title]) => row(id, title));
   }
+  const form = COUNTY_FORM[abbr];
+  if (form) {
+    const caution = VARYING_COUNTY.has(abbr) ? " A charter or home-rule county may use a different body. This list does not guess which." : "";
+    return form.map(([id, title], index) => row(id, title, index === 0 ? `${note}${caution}` : note));
+  }
   return structuralCounty(county, abbr);
 }
 
@@ -831,7 +883,7 @@ function ohioOffices(unit: OhioUnit): OfficeView[] {
         ),
       ];
     }
-    if (unit.func === "A" || unit.func === "B") {
+    if (unit.abbr === "OH" && (unit.func === "A" || unit.func === "B")) {
       return [
         stampCensus(
           unpublished(`${unit.id}-trustees`, "township", "Board of township trustees", jurisdiction, ""),
@@ -840,6 +892,14 @@ function ohioOffices(unit: OhioUnit): OfficeView[] {
         stampCensus(
           unpublished(`${unit.id}-fiscal`, "township", "Fiscal officer", jurisdiction, ""),
           "The office applies. The holder is not in the published roll on this date.",
+        ),
+      ];
+    }
+    if (unit.func === "A" || unit.func === "B" || unit.func === "G") {
+      return [
+        stampCensus(
+          unpublished(`${unit.id}-board`, "township", "Township board", jurisdiction, ""),
+          "The township government is active. Members are not listed. The local title is not guessed.",
         ),
       ];
     }
@@ -852,6 +912,25 @@ function ohioOffices(unit: OhioUnit): OfficeView[] {
             ? "Inactive township government. No trustees are seated."
             : "Census lists the name. It is not a separate township government.";
     return [stampCensus(unpublished(`${unit.id}-gov`, "township", "Township government", jurisdiction, ""), why)];
+  }
+  if (unit.func !== "A" && unit.func !== "B") {
+    const why =
+      unit.func === "C"
+        ? "Consolidated with another government. No separate board is seated."
+        : unit.func === "N"
+          ? "Census does not list a functioning government here. No officers are seated."
+          : unit.func === "I"
+            ? "Inactive government. No officers are seated."
+            : "Census lists the name. It is not a separate municipal government.";
+    const title =
+      unit.kind === "town"
+        ? "Town government"
+        : unit.kind === "village"
+          ? "Village government"
+          : unit.kind === "borough"
+            ? "Borough government"
+            : "Municipal government";
+    return [stampCensus(unpublished(`${unit.id}-gov`, "municipal", title, unit.name, ""), why), school()];
   }
   if (unit.abbr === "IN" && unit.kind === "town") {
     return [
@@ -901,12 +980,68 @@ function ohioOffices(unit: OhioUnit): OfficeView[] {
       school(),
     ];
   }
+  if (unit.kind === "town" && (unit.abbr === "CT" || unit.abbr === "ME" || unit.abbr === "MA" || unit.abbr === "NH" || unit.abbr === "RI" || unit.abbr === "VT")) {
+    return [
+      stampCensus(
+        unpublished(`${unit.id}-select`, "municipal", "Select board", unit.name, ""),
+        "A mayor is not assumed. Some towns elect a first selectman as chair. No holder is named.",
+      ),
+      school(),
+    ];
+  }
+  if (unit.kind === "town" && unit.abbr === "NY") {
+    return [
+      stampCensus(
+        unpublished(`${unit.id}-supervisor`, "municipal", "Town supervisor", unit.name, ""),
+        "The office applies. The holder is not in the published roll on this date.",
+      ),
+      stampCensus(
+        unpublished(`${unit.id}-board`, "municipal", "Town board", unit.name, ""),
+        "Members are not listed.",
+      ),
+      school(),
+    ];
+  }
+  if (unit.kind === "town" && unit.abbr === "WI") {
+    return [
+      stampCensus(
+        unpublished(`${unit.id}-board`, "municipal", "Town board", unit.name, ""),
+        "Members are not listed. A mayor is not assumed.",
+      ),
+      school(),
+    ];
+  }
+  if (unit.kind === "borough" && unit.abbr === "CT") {
+    return [
+      stampCensus(
+        unpublished(`${unit.id}-warden`, "municipal", "Warden", unit.name, ""),
+        "The office applies. The holder is not in the published roll on this date.",
+      ),
+      stampCensus(
+        unpublished(`${unit.id}-burgesses`, "municipal", "Board of burgesses", unit.name, ""),
+        "Members are not listed.",
+      ),
+      school(),
+    ];
+  }
+  if (unit.kind === "borough") {
+    return [
+      stampCensus(
+        unpublished(`${unit.id}-mayor`, "municipal", "Mayor", unit.name, ""),
+        "The office applies. The holder is not in the published roll on this date.",
+      ),
+      stampCensus(
+        unpublished(`${unit.id}-council`, "municipal", "Borough council", unit.name, ""),
+        "Members are not listed.",
+      ),
+      school(),
+    ];
+  }
   const council = unit.kind === "village" ? "Village council" : unit.kind === "town" ? "Town council" : "City council";
-  const quiet = unit.func === "I" ? " Census marks this municipality inactive." : "";
   const mayorNote =
     unit.abbr === "AZ" && unit.kind === "town"
       ? "An Arizona town has a mayor. The council often chooses that mayor. The holder is not named."
-      : `The office applies. The holder is not in the published roll on this date.${quiet}`;
+      : "The office applies. The holder is not in the published roll on this date.";
   return [
     stampCensus(
       unpublished(`${unit.id}-mayor`, "municipal", "Mayor", unit.name, ""),
@@ -914,7 +1049,7 @@ function ohioOffices(unit: OhioUnit): OfficeView[] {
     ),
     stampCensus(
       unpublished(`${unit.id}-council`, "municipal", council, unit.name, ""),
-      `Members are not listed.${quiet}`,
+      "Members are not listed.",
     ),
     school(),
   ];
@@ -1269,14 +1404,16 @@ export function resolve(input: {
       const district = j.senate[0] ?? 0;
       offices.push(
         stampRel(
-          unpublished(`${abbr}-senate-${district}`, "state", `State senate · District ${district}`, state.name, ""),
-          "District number from the Census 2024 state-senate relationship file. The member is not in the published roll. The November 3, 2026 winner is not seated.",
+          unpublished(`${abbr}-senate-${district}`, "state", upperChamber(abbr, district), state.name, ""),
+          abbr === "NE"
+            ? "District from the Census 2024 state-senate relationship file. Nebraska has one chamber. The member is not in the published roll. The November 3, 2026 winner is not seated."
+            : "District from the Census 2024 state-senate relationship file. The member is not in the published roll. The November 3, 2026 winner is not seated.",
         ),
       );
     } else if (j?.senate && j.senate.length > 1) {
       offices.push(
         stampRel(
-          unpublished(`${abbr}-senate`, "state", "State senate", state.name, ""),
+          unpublished(`${abbr}-senate`, "state", upperChamber(abbr), state.name, ""),
           `This place meets 2024 state-senate districts ${j.senate.join(", ")}. No single member is assigned.`,
         ),
       );
@@ -1285,11 +1422,13 @@ export function resolve(input: {
         unpublished(
           `${abbr}-senate`,
           "state",
-          "State senate",
+          upperChamber(abbr),
           state.name,
-          abbr === "OH"
-            ? "The Senate president is listed separately. A local senate district still applies, and this atlas does not invent the district number or the member."
-            : "A state senate district applies once a point is inside it. This atlas does not invent the district number or the member.",
+          abbr === "NE"
+            ? "Nebraska has one legislative chamber. A district is named only when the place is inside one."
+            : abbr === "OH"
+              ? "The Senate president is listed separately. A local senate district still applies, and this atlas does not invent the district number or the member."
+              : "A state senate district applies once a point is inside it. This atlas does not invent the district number or the member.",
         ),
       );
     }
@@ -1314,25 +1453,23 @@ export function resolve(input: {
       const district = j.house[0] ?? 0;
       offices.push(
         stampRel(
-          unpublished(`${abbr}-house-state-${district}`, "state", `State house · District ${district}`, state.name, ""),
-          abbr === "AZ"
-            ? "District number from the Census 2024 state-house relationship file. Arizona elects two representatives from this district. Neither is in the published roll. The November 3, 2026 winner is not seated."
-            : "District number from the Census 2024 state-house relationship file. The member is not in the published roll. The November 3, 2026 winner is not seated.",
+          unpublished(`${abbr}-house-state-${district}`, "state", lowerChamber(abbr, district), state.name, ""),
+          lowerNote(abbr),
         ),
       );
     } else if (j?.house && j.house.length > 1) {
       offices.push(
         stampRel(
-          unpublished(`${abbr}-house-state`, "state", "State house", state.name, ""),
+          unpublished(`${abbr}-house-state`, "state", lowerChamber(abbr), state.name, ""),
           `This place meets 2024 state-house districts ${j.house.join(", ")}. No single member is assigned.`,
         ),
       );
-    } else {
+    } else if (abbr !== "NE") {
       offices.push(
         unpublished(
           `${abbr}-house-state`,
           "state",
-          "State house",
+          lowerChamber(abbr),
           state.name,
           abbr === "OH"
             ? "The Speaker is listed separately. A local house district still applies, and this atlas does not invent the district number or the member."
@@ -1366,9 +1503,9 @@ export function resolve(input: {
         ),
       );
     }
-  } else if (ohio && ohio.kind !== "county" && ohio.kind !== "borough") {
+  } else if (ohio && ohio.kind !== "county" && !(ohio.kind === "borough" && ohio.abbr === "AK")) {
     offices.push(...ohioOffices(ohio));
-  } else if (city && abbr && ohio?.kind !== "borough") {
+  } else if (city && abbr && !(ohio?.kind === "borough" && ohio.abbr === "AK")) {
     offices.push(...structuralCity(city, abbr));
   }
 
@@ -1386,19 +1523,20 @@ export function resolve(input: {
   const named = offices.filter((o) => o.name).length;
   const confidence: Dossier["confidence"] = named >= 6 ? "HIGH" : named >= 2 ? "MEDIUM" : "LOW";
   const also = ohio?.also?.length ? ` · also ${ohio.also.join(", ")}` : "";
+  const akBorough = ohio?.kind === "borough" && ohio.abbr === "AK";
   const title = place
     ? place.city
-    : ohio && ohio.kind !== "county" && ohio.kind !== "borough"
+    : ohio && ohio.kind !== "county" && !akBorough
       ? ohioTitle(ohio)
       : countyName
-        ? ohio?.kind === "borough"
+        ? akBorough && ohio
           ? ohio.name
-          : `${countyName} County`
+          : countyHeading(countyName, abbr ?? ohio?.abbr ?? "")
         : state?.name ?? "United States";
   const subtitle = place
     ? `${place.county} County, ${state?.name ?? place.abbr}${also}`
     : ohio && ohio.kind !== "county"
-      ? `${placeWhere(ohio)}${ohio.kind === "borough" ? "" : `, ${placeStateName(ohio.abbr)}`}${also}`
+      ? `${placeWhere(ohio)}${akBorough ? "" : `, ${placeStateName(ohio.abbr)}`}${also}`
       : countyName
         ? `${state?.name ?? abbr}`
         : state
@@ -1494,7 +1632,7 @@ export function focusHits(query: string): {
     const where = placeWhere(unit);
     hits.push({
       id: `ohio-${unit.id}`,
-      label: unit.kind === "county" ? `${unit.name} County` : unit.name,
+      label: unit.kind === "county" ? countyHeading(unit.name, unit.abbr) : unit.name,
       hint: `${unit.abbr} · ${ohioKindLabel(unit.kind)} · ${where}${unit.also?.length ? ` · also ${unit.also.join(", ")}` : ""}`,
       abbr: unit.abbr,
       placeId,
@@ -1522,7 +1660,8 @@ export function focusHits(query: string): {
   }
   const bare = q.replace(/,/g, " ").replace(/\s+/g, " ").trim();
   const publishedExact = new Set(PLACES.filter((p) => p.city.toLowerCase() === bare).map((p) => p.id));
-  if (publishedExact.size && !/\b(alabama|alaska|arizona|ohio|indiana|kentucky)\b/.test(q)) {
+  const namesState = geo.states.some((s) => q.includes(s.name.toLowerCase()));
+  if (publishedExact.size && !namesState) {
     hits.sort((a, b) => Number(publishedExact.has(b.placeId)) - Number(publishedExact.has(a.placeId)));
   }
   return hits.slice(0, 8);
