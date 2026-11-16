@@ -1,6 +1,9 @@
 /** Lieutenant governors, or the note that the state has none.
  *  Names checked against Ballotpedia's current list and the Wikipedia current list on 2026-11-05.
- *  Hawaii shows the acting lieutenant governor after April 23, 2026. */
+ *  Hawaii shows the acting lieutenant governor after April 23, 2026.
+ *  A name is public from 2024-01-01 when this file already has the term. Earlier names stay off the public map. */
+
+import { PUBLIC_EXEC_FLOOR } from "@/data/civic";
 
 export type Lieutenant = {
   abbr: string;
@@ -77,8 +80,24 @@ export const LIEUTENANTS: Lieutenant[] = [
 
 export const NO_LIEUTENANT = new Set(["AZ", "ME", "NH", "OR", "WY", "DC", "PR"]);
 
+export type BlankReason = "unpublished" | "vacant" | "unverified";
+
 export function lieutenantOn(asOf: string, abbr: string): Lieutenant | null {
-  if (asOf < "2025-01-01") return null;
+  if (asOf < PUBLIC_EXEC_FLOOR) return null;
   const rows = LIEUTENANTS.filter((r) => r.abbr === abbr && r.start <= asOf && asOf < r.end);
   return rows[0] ?? null;
+}
+
+/** Why a lieutenant governor row has no name. Null when a person is seated, or the state has no such office. */
+export function lieutenantBlank(asOf: string, abbr: string): BlankReason | null {
+  if (NO_LIEUTENANT.has(abbr) || lieutenantOn(asOf, abbr)) return null;
+  if (asOf < PUBLIC_EXEC_FLOOR) return "unpublished";
+  if (abbr === "NJ" && asOf >= "2026-11-05") return "vacant";
+  const rows = LIEUTENANTS.filter((r) => r.abbr === abbr).sort((a, b) => a.start.localeCompare(b.start));
+  for (let i = 0; i < rows.length - 1; i++) {
+    const left = rows[i];
+    const right = rows[i + 1];
+    if (left.end <= asOf && asOf < right.start && /vacant/i.test(left.note ?? "")) return "vacant";
+  }
+  return "unpublished";
 }

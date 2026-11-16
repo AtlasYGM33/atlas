@@ -6,8 +6,10 @@ export const TODAY = "2026-11-04";
 export const ELECTION = "2026-11-03";
 /** Paid archive floor. A licensed roll is not published for a date before this. */
 export const ARCHIVE_FLOOR = "2000-01-01";
-/** Rolls strictly before this date are the paid archive. The public map starts here. */
+/** Rolls strictly before this date are the paid archive for Congress and the courts. */
 export const ARCHIVE_CUTOFF = "2025-01-01";
+/** Verified statewide executives already on a sourced row are public from this date. */
+export const PUBLIC_EXEC_FLOOR = "2024-01-01";
 export const TERM_START = "2025-01-20";
 export const TERM_END = "2027-01-20";
 export const CONGRESS_SWEAR = "2027-01-03";

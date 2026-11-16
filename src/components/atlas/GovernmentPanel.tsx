@@ -85,6 +85,10 @@ export function GovernmentPanel({
                           {o.name}
                         </>
                       )
+                    ) : o.blank === "vacant" ? (
+                      "Vacant"
+                    ) : o.blank === "unverified" ? (
+                      "Unverified"
                     ) : (
                       "Unpublished"
                     )}

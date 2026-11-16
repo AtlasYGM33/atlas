@@ -8,6 +8,7 @@ import geo from "@/data/geo-states.json";
 import {
   CALENDAR,
   OPENINGS,
+  PUBLIC_EXEC_FLOOR,
   activeSeats,
   administrationOn,
   formatSlash,
@@ -15,8 +16,8 @@ import {
 } from "@/data/civic";
 import { membersOn, type Member } from "@/data/congress";
 import { governorOn } from "@/data/governors";
-import { NO_LIEUTENANT, lieutenantOn } from "@/data/lieutenants";
-import { NO_SECRETARY, secretaryOn } from "@/data/secretaries";
+import { NO_LIEUTENANT, lieutenantBlank, lieutenantOn } from "@/data/lieutenants";
+import { NO_SECRETARY, secretaryBlank, secretaryOn } from "@/data/secretaries";
 import { LEGISLATOR_AS_OF, LEGISLATOR_SOURCE, legislatorsAtLarge, legislatorsOn, type LegChamber } from "@/data/legislators";
 import {
   countyHeading,
@@ -39,6 +40,7 @@ import {
 } from "@/data/ohio";
 
 export type Confidence = "HIGH" | "MEDIUM" | "UNPUBLISHED";
+export type BlankReason = "unpublished" | "vacant" | "unverified";
 
 export type OfficeView = {
   id: string;
@@ -51,6 +53,8 @@ export type OfficeView = {
   end: string | null;
   url?: string;
   confidence: Confidence;
+  /** Set only when name is null. Unpublished: no sourced holder. Vacant: the office is empty. Unverified: a name exists and was not checked. */
+  blank?: BlankReason | null;
   source?: string;
   note?: string;
 };
@@ -773,6 +777,7 @@ function officeFromHolder(
     end: holder && holder.end < "2090-01-01" ? holder.end : null,
     url: holder?.url,
     confidence,
+    blank: holder ? null : "unpublished",
     source,
     note,
   };
@@ -803,6 +808,7 @@ function unpublished(id: string, level: OfficeView["level"], title: string, juri
     start: null,
     end: null,
     confidence: "UNPUBLISHED",
+    blank: "unpublished",
     note,
   };
 }
@@ -824,6 +830,7 @@ function localOffices(place: Place, asOf: string, levels: OfficeView["level"][])
         holder ? office.note : `No published holder on ${formatSlash(asOf)}. ${office.note ?? ""}`.trim(),
       ),
     );
+    if (!holder) rows[rows.length - 1].blank = "unpublished";
     if (holder?.url && !rows[rows.length - 1].url) rows[rows.length - 1].url = holder.url;
     rows[rows.length - 1].url = holder?.url ?? office.sourceUrl;
     rows[rows.length - 1].source = office.source;
@@ -1703,36 +1710,38 @@ export function resolve(input: {
     );
     if (!NO_LIEUTENANT.has(abbr)) {
       const lg = lieutenantOn(asOf, abbr);
-      offices.push(
-        officeFromHolder(
-          `${abbr}-lg`,
-          "state",
-          lg?.title ?? "Lieutenant governor",
-          state.name,
-          lg ? { name: lg.name, party: lg.party, start: lg.start, end: lg.end, url: lg.url } : null,
-          lg ? "HIGH" : "UNPUBLISHED",
-          lg?.url,
-          lg?.note,
-        ),
+      const why = lieutenantBlank(asOf, abbr);
+      const row = officeFromHolder(
+        `${abbr}-lg`,
+        "state",
+        lg?.title ?? "Lieutenant governor",
+        state.name,
+        lg ? { name: lg.name, party: lg.party, start: lg.start, end: lg.end, url: lg.url } : null,
+        lg ? "HIGH" : why === "vacant" ? "HIGH" : "UNPUBLISHED",
+        lg?.url,
+        lg?.note ?? (why === "vacant" ? "Vacant. The office is empty on this date. No name is invented." : why === "unverified" ? "Unverified. A name was offered and was not checked, so it stays off the map." : "Unpublished. The office applies. No sourced holder is in the public roll for this date."),
       );
+      if (!lg) row.blank = why ?? "unpublished";
+      offices.push(row);
     }
     if (!NO_SECRETARY.has(abbr)) {
       const sos = secretaryOn(asOf, abbr);
-      offices.push(
-        officeFromHolder(
-          `${abbr}-sos`,
-          "state",
-          "Secretary of state",
-          state.name,
-          sos ? { name: sos.name, party: sos.party, start: sos.start, end: "2099-01-01", url: sos.url } : null,
-          sos ? "HIGH" : "UNPUBLISHED",
-          sos?.url,
-          sos?.note,
-        ),
+      const why = secretaryBlank(asOf, abbr);
+      const row = officeFromHolder(
+        `${abbr}-sos`,
+        "state",
+        "Secretary of state",
+        state.name,
+        sos ? { name: sos.name, party: sos.party, start: sos.start, end: "2099-01-01", url: sos.url } : null,
+        sos ? "HIGH" : "UNPUBLISHED",
+        sos?.url,
+        sos?.note ?? "Unpublished. The office applies. No sourced holder is in the public roll for this date.",
       );
+      if (!sos) row.blank = why ?? "unpublished";
+      offices.push(row);
     }
     if (!NO_ATTORNEY.has(abbr)) {
-      const ag = asOf >= "2025-01-01" ? AGS.find((a) => a.abbr === abbr && a.start <= asOf) : undefined;
+      const ag = asOf >= PUBLIC_EXEC_FLOOR ? AGS.find((a) => a.abbr === abbr && a.start <= asOf) : undefined;
       const title = attorneyTitle(abbr);
       if (ag) {
         offices.push(
@@ -1786,7 +1795,7 @@ export function resolve(input: {
     }
     if (abbr === "OH") {
       for (const row of OH_ROW) {
-        const seated = asOf >= "2025-01-01" && row.start <= asOf && asOf < row.end;
+        const seated = asOf >= PUBLIC_EXEC_FLOOR && row.start <= asOf && asOf < row.end;
         offices.push(
           officeFromHolder(
             row.id,

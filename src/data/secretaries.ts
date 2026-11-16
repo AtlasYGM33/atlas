@@ -1,7 +1,10 @@
 /** Secretaries of state currently in office.
  *  Names from the Wikipedia current table, dates checked against Ballotpedia where that list was available.
  *  Alaska, Hawaii, and Utah have no secretary of state.
- *  A secretary is shown from the sworn date on this row. Earlier holders are not in this file. */
+ *  A secretary is shown from the sworn date on this row, and only on or after 2024-01-01. Earlier holders are not in this file. */
+
+import { PUBLIC_EXEC_FLOOR } from "@/data/civic";
+import type { BlankReason } from "@/data/lieutenants";
 
 export type Secretary = {
   abbr: string;
@@ -69,8 +72,14 @@ export const NO_SECRETARY = new Set(["AK", "HI", "UT", "DC", "AS", "GU", "MP", "
 const BY_ABBR = new Map(SECRETARIES.map((s) => [s.abbr, s]));
 
 export function secretaryOn(asOf: string, abbr: string): Secretary | null {
-  if (asOf < "2025-01-01") return null;
+  if (asOf < PUBLIC_EXEC_FLOOR) return null;
   const s = BY_ABBR.get(abbr);
   if (!s || s.start > asOf) return null;
   return s;
+}
+
+/** A missing secretary is unpublished. This file has no sourced vacancy to call vacant, and no unchecked name to call unverified. */
+export function secretaryBlank(asOf: string, abbr: string): BlankReason | null {
+  if (NO_SECRETARY.has(abbr) || secretaryOn(asOf, abbr)) return null;
+  return "unpublished";
 }

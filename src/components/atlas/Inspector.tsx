@@ -30,6 +30,8 @@ import { membersOn, seatLabel } from "@/data/congress";
 import { governorOn } from "@/data/governors";
 import { lieutenantOn, NO_LIEUTENANT } from "@/data/lieutenants";
 import { resultsOn } from "@/data/results";
+import { CANDIDATE_LABEL, candidatesOn } from "@/data/candidates";
+import { DECADES } from "@/data/archive-decades";
 import { NO_SECRETARY, secretaryOn } from "@/data/secretaries";
 import { justiceRole, nationalCourt, stateCourts, type Bench } from "@/data/courts";
 import { VACANCY_DETAIL, calendarEvents, placeById, type Follow } from "@/data/government";
@@ -232,6 +234,8 @@ export function Inspector(props: Props) {
           <Sources abbr={abbr} />
         ) : tab === "vacancies" || filter === "vacancies" || filter === "specials" ? (
           <SeatList seats={seats} asOf={asOf} activeId={activeId} onOpen={onOpen} onActive={onActive} />
+        ) : tab === "candidates" ? (
+          <Candidates abbr={abbr} asOf={asOf} />
         ) : (
           <>
             <LiveStrip asOf={asOf} headline={headline} checkedLabel={checkedLabel} />
@@ -248,7 +252,6 @@ export function Inspector(props: Props) {
                 onActive={onActive}
               />
             )}
-            {abbr && people.length > 0 && tab === "candidates" ? <PeopleList people={people} /> : null}
           </>
         )}
         <p className="disclaimer">
@@ -664,6 +667,31 @@ function Stat({ n, l }: { n: string; l: string }) {
   );
 }
 
+function Candidates({ abbr, asOf }: { abbr: string | null; asOf: string }) {
+  const rows = candidatesOn(asOf, abbr);
+  const open = DECADES.filter((d) => d.status === "not-aggregated").length;
+  return (
+    <div className="stack">
+      <article className="card static">
+        <p className="kicker">Candidates and results</p>
+        <h3>{rows.length ? `${rows.length} records on this date` : "No candidate record on this date"}</h3>
+        <p>
+          A blank office is one of three things. Unpublished means the office applies and no sourced holder is in the public roll. Vacant means the office is empty. Unverified means a name was offered and was not checked, so it stays off the map. A called winner is not sworn in.
+        </p>
+        <p className="meta">{open} DECADES BEFORE 2000 ARE NOT AGGREGATED</p>
+      </article>
+      {rows.map((row) => (
+        <article key={row.id} className="card static">
+          <p className="kicker">{row.abbr} · {row.office}</p>
+          <h3>{row.party ? `${row.party} ` : ""}{row.name}</h3>
+          <p>{CANDIDATE_LABEL[row.status]}</p>
+          <p>{row.note}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 function Results({
   abbr,
   asOf,
@@ -874,22 +902,6 @@ function MeasureList({
             <p>{m.body}</p>
             <p className="meta">{meta}</p>
           </button>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function PeopleList({ people }: { people: { id: string; name: string; party: string; race: string }[] }) {
-  return (
-    <div className="stack people">
-      <p className="kicker">ON THE BALLOT · NOT A PROJECTION</p>
-      {people.map((p) => (
-        <article key={p.id} className="card static person">
-          <h3>{p.name}</h3>
-          <p>
-            {p.party} · {p.race}. Listed because the seat was open. Atlas does not declare a winner.
-          </p>
         </article>
       ))}
     </div>
