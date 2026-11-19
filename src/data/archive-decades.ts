@@ -64,7 +64,7 @@ DECADES.push(
     start: "2020-01-01",
     end: "2024-01-01",
     status: "partial",
-    note: "The public map starts 2024-01-01. This slice is the rest of the decade and is not a full canvass.",
+    note: "The public map starts 2024-01-01. The private pack now has a partial 2022 U.S. Senate seated roll for this slice. Not a full canvass.",
   },
 );
 
