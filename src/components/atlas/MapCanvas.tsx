@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { CountyGeom, StateGeom } from "@/data/geo";
+import type { CdGeom, CountyGeom, StateGeom } from "@/data/geo";
 import { SEATS, type MapMode } from "@/data/civic";
 import { governorOn } from "@/data/governors";
 
@@ -23,6 +23,7 @@ type Props = {
   onHover: (text: string | null) => void;
   onClear: () => void;
   showFips: boolean;
+  showDistricts: boolean;
 };
 
 function presentation(abbr: string, mode: MapMode, vacant: ReadonlySet<string>): string {
@@ -88,6 +89,47 @@ function loadCounties(): Promise<CountyGeom[]> {
   return countyLoad;
 }
 
+type DrawnCd = CdGeom & { cx: number; cy: number };
+
+let districtCache: DrawnCd[] | null = null;
+let districtLoad: Promise<DrawnCd[]> | null = null;
+
+function pathCenter(d: string): [number, number] {
+  const nums = d.match(/-?\d*\.?\d+/g);
+  if (!nums || nums.length < 2) return [0, 0];
+  let sx = 0;
+  let sy = 0;
+  let n = 0;
+  for (let i = 0; i + 1 < nums.length; i += 2) {
+    sx += Number(nums[i]);
+    sy += Number(nums[i + 1]);
+    n += 1;
+  }
+  return n ? [sx / n, sy / n] : [0, 0];
+}
+
+function loadDistricts(): Promise<DrawnCd[]> {
+  if (districtCache) return Promise.resolve(districtCache);
+  districtLoad ??= import("@/data/cd119.json").then((mod) => {
+    const data = mod.default.map((row) => {
+      const [cx, cy] = pathCenter(row.d);
+      return { ...row, cx, cy };
+    });
+    districtCache = data;
+    return data;
+  });
+  return districtLoad;
+}
+
+function districtName(cd: number, abbr: string): string {
+  if (cd === 0) {
+    if (abbr === "DC") return "Delegate";
+    if (abbr === "PR") return "Resident commissioner";
+    return "At large";
+  }
+  return `District ${cd}`;
+}
+
 export function MapCanvas({
   geoms,
   markers,
@@ -105,6 +147,7 @@ export function MapCanvas({
   onHover,
   onClear,
   showFips,
+  showDistricts,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const moved = useRef(false);
@@ -112,6 +155,7 @@ export function MapCanvas({
   const drag = useRef<{ x: number; y: number; view: View; id: number } | null>(null);
   const [view, setView] = useState<View>({ x: -30, y: -36, w: 1060, h: 690 });
   const [counties, setCounties] = useState<CountyGeom[] | null>(countyCache);
+  const [districts, setDistricts] = useState<DrawnCd[] | null>(districtCache);
   const [hoverCounty, setHoverCounty] = useState<string | null>(null);
 
   const visible = geoms.filter((g) => g.frame === frame);
@@ -169,6 +213,17 @@ export function MapCanvas({
   }, [countyState]);
 
   useEffect(() => {
+    if (!showDistricts) return;
+    let cancel = false;
+    loadDistricts().then((rows) => {
+      if (!cancel) setDistricts(rows);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [showDistricts]);
+
+  useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
@@ -204,6 +259,8 @@ export function MapCanvas({
 
   const countyRows =
     countyState && counties ? counties.filter((c) => c.state === countyState.fips) : [];
+  const districtRows = showDistricts && districts ? districts.filter((d) => d.frame === frame) : [];
+  const showDistrictLabels = Boolean(selectedAbbr) || view.w < 420;
 
   const vacant = new Set(vacantAbbrs);
   const seats = SEATS.filter((s) => frame === "nation" && vacant.has(s.abbr));
@@ -242,6 +299,12 @@ export function MapCanvas({
         const county = node?.closest("[data-county]");
         if (county instanceof SVGElement && county.dataset.county && county.dataset.cname && county.dataset.cabbr) {
           onSelectCounty(county.dataset.county, county.dataset.cname, county.dataset.cabbr);
+          return;
+        }
+        const district = node?.closest("[data-cd]");
+        if (district instanceof SVGElement && district.dataset.abbr) {
+          if (e.detail >= 2) onZoomState(district.dataset.abbr);
+          else onSelectState(district.dataset.abbr);
           return;
         }
         const state = node?.closest("[data-abbr]");
@@ -317,6 +380,27 @@ export function MapCanvas({
             </g>
           );
         })}
+        {districtRows.map((d) => {
+          const state = geoms.find((g) => g.abbr === d.abbr);
+          const label = districtName(d.cd, d.abbr);
+          const title = state ? `${state.name} · ${label}` : `${d.abbr} · ${label}`;
+          const active = !selectedAbbr || selectedAbbr === d.abbr;
+          return (
+            <path
+              key={`${d.abbr}-${d.cd}`}
+              d={d.d}
+              data-cd={d.cd}
+              data-abbr={d.abbr}
+              className={"district" + (selectedAbbr === d.abbr ? " is-selected" : "") + (active ? "" : " is-dim")}
+              onPointerEnter={() => {
+                setHoverCounty(null);
+                onHover(title);
+              }}
+            >
+              <title>{title}</title>
+            </path>
+          );
+        })}
         {countyRows.map((c) => (
           <path
             key={c.fips}
@@ -380,6 +464,23 @@ export function MapCanvas({
                   textAnchor="middle"
                 >
                   {c.name}
+                </text>
+              ))
+          : null}
+        {showDistricts && showDistrictLabels
+          ? districtRows
+              .filter((d) => !selectedAbbr || d.abbr === selectedAbbr)
+              .map((d) => (
+                <text
+                  key={`${d.abbr}-${d.cd}-lab`}
+                  className="district-label"
+                  x={d.cx}
+                  y={d.cy}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={Math.max(3.2, Math.min(7, view.w / 36))}
+                >
+                  {d.cd === 0 ? "AL" : d.cd}
                 </text>
               ))
           : null}

@@ -308,11 +308,16 @@ display:flex
 .legend button.is-on,.layer-pop button.is-on {
 color:var(--color-fg)
 }
-.sw-vacancy,.sw-sage,.sw-federal,.sw-deadline,.sw-fips {
+.sw-vacancy,.sw-sage,.sw-federal,.sw-deadline,.sw-fips,.sw-district {
 border-radius:99px;
 width:8px;
 height:8px;
 display:inline-block
+}
+.sw-district {
+border-radius:1px;
+background:transparent;
+box-shadow:inset 0 0 0 1.5px #f4efe4
 }
 .sw-fips {
 border-radius:2px;
@@ -400,6 +405,27 @@ fill:#ffffff38
 }
 .county.is-selected {
 stroke:#fff
+}
+.district {
+fill:#0000;
+stroke:#f4efe4d1;
+stroke-width:.85px;
+vector-effect:non-scaling-stroke;
+cursor:pointer
+}
+.district:hover,.district.is-selected {
+fill:#ffffff24
+}
+.district.is-dim {
+opacity:.28
+}
+.district-label {
+fill:#f7f4ee;
+font-family:var(--font-sans);
+font-weight:650;
+pointer-events:none;
+stroke:#0a0c0e;
+paint-order:stroke fill
 }
 .county-label {
 fill:var(--color-fg);

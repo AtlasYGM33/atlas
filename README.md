@@ -10,7 +10,7 @@ The paid archive is not in this repository. Congress, the U.S. Supreme Court, an
 
 Ohio and the other forty-nine states list every Census government, A to Z. Each state carries a 119th Congress district, a 2024 state-senate district, a 2024 state-house district, and the school district at the Census point. Alaska senate districts stay letters. Nebraska has no house. The District of Columbia and the five territories are on the map.
 
-The map can show FIPS codes as their own layer. A street address goes to the Census Bureau geocoder and returns the county and its FIPS code. There is no public API.
+The map draws the 119th Congress House districts as their own layer. A district is a shape, not only a number. Alaska, Hawaii, and Puerto Rico draw in their insets. The shapes are the 119th Congress. An older date is not pinned to an earlier Congress. FIPS codes are a separate layer. A street address goes to the Census Bureau geocoder and returns the county and its FIPS code. There is no public API.
 
 ## Run
 

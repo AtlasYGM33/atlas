@@ -110,6 +110,7 @@ export function AtlasApp() {
   const [toast, setToast] = useState<string | null>(null);
   const [layersOpen, setLayersOpen] = useState(false);
   const [showFips, setShowFips] = useState(false);
+  const [showDistricts, setShowDistricts] = useState(true);
   const [censusHit, setCensusHit] = useState<GeocodeHit | null>(null);
   const [censusBusy, setCensusBusy] = useState(false);
   const [intro, setIntro] = useState(true);
@@ -632,6 +633,7 @@ export function AtlasApp() {
           {layersOpen ? (
             <div className="layer-pop">
               <LayerButtons mode={mapMode} onPick={(m) => { setMapMode(m); setLayersOpen(false); }} />
+              <DistrictToggle on={showDistricts} onToggle={() => setShowDistricts((v) => !v)} />
               <FipsToggle on={showFips} onToggle={() => setShowFips((v) => !v)} />
             </div>
           ) : null}
@@ -653,6 +655,7 @@ export function AtlasApp() {
           onSelectCounty={openCounty}
           onHover={setHover}
           showFips={showFips}
+          showDistricts={showDistricts}
           onClear={() => {
             if (selection.level === "county" && selectedAbbr) {
               const g = byAbbr.get(selectedAbbr);
@@ -671,6 +674,7 @@ export function AtlasApp() {
         <aside className="legend" aria-label="Map mode">
           <p>Map mode</p>
           <LayerButtons mode={mapMode} onPick={setMapMode} />
+          <DistrictToggle on={showDistricts} onToggle={() => setShowDistricts((v) => !v)} />
           <FipsToggle on={showFips} onToggle={() => setShowFips((v) => !v)} />
           <p className="legend-count">
             {seatsNow.length} vacant · {seatsNow.length} specials · {daysPhrase(asOf).replace(" to 3 Nov", "").replace(" since 3 Nov", " ago")}
@@ -850,6 +854,15 @@ function ageLabel(iso: string | null, nowMs: number): string {
   if (s < 5) return "just now";
   if (s < 60) return `${s}s ago`;
   return `${Math.floor(s / 60)}m ago`;
+}
+
+function DistrictToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" className={on ? "is-on" : ""} onClick={onToggle} aria-pressed={on}>
+      <i className="sw-district" />
+      House districts
+    </button>
+  );
 }
 
 function FipsToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
